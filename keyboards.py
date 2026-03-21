@@ -33,11 +33,11 @@ def lang_select_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def country_select_kb() -> InlineKeyboardMarkup:
-    from config import COUNTRIES
+def country_select_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+    from config import COUNTRIES, get_country_name
     buttons = [
         [InlineKeyboardButton(
-            text=f"{info['flag']} {info['name']}",
+            text=f"{info['flag']} {get_country_name(code, lang)}",
             callback_data=f"setcountry_{code}",
         )]
         for code, info in COUNTRIES.items()

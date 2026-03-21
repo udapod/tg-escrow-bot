@@ -15,6 +15,9 @@ VIP_PRICE = float(os.getenv("VIP_PRICE", "10"))          # стоимость VI
 VIP_DAYS = int(os.getenv("VIP_DAYS", "30"))               # срок действия в днях
 VIP_COMMISSION = float(os.getenv("VIP_COMMISSION", "1.5")) # комиссия для VIP (вместо 3%)
 
+# Прокси для подключения к Telegram API (например http://127.0.0.1:10808)
+PROXY = os.getenv("PROXY", "")
+
 # Штраф при отмене после оплаты (% от суммы на эскроу)
 CANCEL_PENALTY = float(os.getenv("CANCEL_PENALTY", "2"))
 # Минимальная комиссия (USDT)
@@ -78,13 +81,59 @@ CATEGORIES = {
 
 # Страны и основные города
 COUNTRIES = {
-    "uz": {"flag": "🇺🇿", "name": "Узбекистан"},
-    "kz": {"flag": "🇰🇿", "name": "Казахстан"},
-    "ru": {"flag": "🇷🇺", "name": "Россия"},
-    "kg": {"flag": "🇰🇬", "name": "Кыргызстан"},
-    "tj": {"flag": "🇹🇯", "name": "Таджикистан"},
-    "tr": {"flag": "🇹🇷", "name": "Турция"},
+    "uz": {
+        "flag": "🇺🇿",
+        "name": {
+            "ru": "Узбекистан", "uz": "O'zbekiston", "kk": "Өзбекстан",
+            "tr": "Özbekistan", "tg": "Ӯзбекистон", "ky": "Өзбекстан", "en": "Uzbekistan",
+        },
+    },
+    "kz": {
+        "flag": "🇰🇿",
+        "name": {
+            "ru": "Казахстан", "uz": "Qozog'iston", "kk": "Қазақстан",
+            "tr": "Kazakistan", "tg": "Қазоқистон", "ky": "Казакстан", "en": "Kazakhstan",
+        },
+    },
+    "ru": {
+        "flag": "🇷🇺",
+        "name": {
+            "ru": "Россия", "uz": "Rossiya", "kk": "Ресей",
+            "tr": "Rusya", "tg": "Русия", "ky": "Россия", "en": "Russia",
+        },
+    },
+    "kg": {
+        "flag": "🇰🇬",
+        "name": {
+            "ru": "Кыргызстан", "uz": "Qirg'iziston", "kk": "Қырғызстан",
+            "tr": "Kırgızistan", "tg": "Қирғизистон", "ky": "Кыргызстан", "en": "Kyrgyzstan",
+        },
+    },
+    "tj": {
+        "flag": "🇹🇯",
+        "name": {
+            "ru": "Таджикистан", "uz": "Tojikiston", "kk": "Тәжікстан",
+            "tr": "Tacikistan", "tg": "Тоҷикистон", "ky": "Тажикстан", "en": "Tajikistan",
+        },
+    },
+    "tr": {
+        "flag": "🇹🇷",
+        "name": {
+            "ru": "Турция", "uz": "Turkiya", "kk": "Түркия",
+            "tr": "Türkiye", "tg": "Туркия", "ky": "Түркия", "en": "Turkey",
+        },
+    },
 }
+
+
+def get_country_name(country_code: str, lang: str = "ru") -> str:
+    """Название страны на нужном языке."""
+    info = COUNTRIES.get(country_code, {})
+    names = info.get("name", {})
+    if isinstance(names, dict):
+        return names.get(lang, names.get("ru", country_code))
+    return names  # fallback for old format
+
 
 CITIES = {
     "uz": [

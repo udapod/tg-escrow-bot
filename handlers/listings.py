@@ -13,7 +13,7 @@ from keyboards import (
     main_menu_kb,
     confirm_cancel_kb,
 )
-from config import CATEGORIES, MIN_DEAL_AMOUNT, COUNTRIES, get_reputation_level
+from config import CATEGORIES, MIN_DEAL_AMOUNT, COUNTRIES, get_reputation_level, get_country_name
 from languages import t, all_btn_texts, get_category_name
 
 router = Router()
@@ -394,7 +394,7 @@ async def cb_browse_category(callback: CallbackQuery):
 
     browse_suffix = f"{category}_all" if show_all_cities else category
 
-    location_label = city if (city and not show_all_cities) else COUNTRIES.get(country, {}).get("name", "")
+    location_label = city if (city and not show_all_cities) else get_country_name(country, lang)
 
     # Навигационные кнопки
     nav_buttons = []

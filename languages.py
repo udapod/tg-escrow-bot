@@ -10,6 +10,7 @@ LANGS = {
     "tr": "🇹🇷 Türkçe",
     "tg": "🇹🇯 Тоҷикӣ",
     "ky": "🇰🇬 Кыргызча",
+    "en": "🇺🇸 English",
 }
 
 # ————— Все переводы —————
@@ -1814,6 +1815,18 @@ TEXTS = {
             "💰 Сумма: {payout} USDT → <code>{wallet}</code>\n\n"
             "Вы уверены?"
         ),
+        "uz": (
+            "⚠️ <b>Nizoni hal qilishni tasdiqlang #{id}</b>\n\n"
+            "Harakat: sotuvchiga to'lov\n"
+            "💰 Summa: {payout} USDT → <code>{wallet}</code>\n\n"
+            "Ishonchingiz komilmi?"
+        ),
+        "kk": (
+            "⚠️ <b>Дау шешімін растаңыз #{id}</b>\n\n"
+            "Әрекет: сатушыға төлем\n"
+            "💰 Сома: {payout} USDT → <code>{wallet}</code>\n\n"
+            "Сенімдісіз бе?"
+        ),
     },
     "resolve_confirm_buyer": {
         "ru": (
@@ -1821,6 +1834,18 @@ TEXTS = {
             "Действие: возврат покупателю\n"
             "💰 Сумма: {total} USDT\n\n"
             "Вы уверены?"
+        ),
+        "uz": (
+            "⚠️ <b>Nizoni hal qilishni tasdiqlang #{id}</b>\n\n"
+            "Harakat: xaridorga qaytarish\n"
+            "💰 Summa: {total} USDT\n\n"
+            "Ishonchingiz komilmi?"
+        ),
+        "kk": (
+            "⚠️ <b>Дау шешімін растаңыз #{id}</b>\n\n"
+            "Әрекет: сатып алушыға қайтару\n"
+            "💰 Сома: {total} USDT\n\n"
+            "Сенімдісіз бе?"
         ),
     },
     "followers_notified": {
@@ -1844,6 +1869,17 @@ TEXTS = {
         "kk": "⏳ Қалған күндер: <b>{days}</b>",
     },
 }
+
+# ————— Подключение внешних переводов —————
+from _lang_tr import TR
+from _lang_tg import TG
+from _lang_ky import KY
+from _lang_en import EN
+
+for _lang_code, _translations in [("tr", TR), ("tg", TG), ("ky", KY), ("en", EN)]:
+    for _key, _val in _translations.items():
+        if _key in TEXTS:
+            TEXTS[_key][_lang_code] = _val
 
 
 def t(lang: str, key: str, **kwargs) -> str:

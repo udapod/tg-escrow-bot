@@ -7,7 +7,7 @@ import time
 
 import database as db
 from keyboards import main_menu_kb, admin_kb, back_to_menu_kb, lang_select_kb, country_select_kb, city_select_kb
-from config import ADMIN_ID, COUNTRIES, CITIES, get_reputation_level
+from config import ADMIN_ID, COUNTRIES, CITIES, get_reputation_level, get_country_name
 from languages import t, all_btn_texts, btn
 
 router = Router()
@@ -93,7 +93,7 @@ async def cmd_lang(message: Message):
 @router.callback_query(F.data.startswith("setlang_"))
 async def cb_set_language(callback: CallbackQuery):
     lang_code = callback.data.split("_", 1)[1]
-    if lang_code not in ("ru", "uz", "kk", "tr", "tg", "ky"):
+    if lang_code not in ("ru", "uz", "kk", "tr", "tg", "ky", "en"):
         await callback.answer("Unknown language", show_alert=True)
         return
 
@@ -111,7 +111,7 @@ async def cb_set_language(callback: CallbackQuery):
         # Новый пользователь — после языка показываем выбор страны
         await callback.message.edit_text(
             t(lang_code, "lang_set") + "\n\n" + t(lang_code, "choose_country"),
-            reply_markup=country_select_kb(),
+            reply_markup=country_select_kb(lang_code),
         )
         await callback.answer()
         return
@@ -137,7 +137,7 @@ async def cb_set_country(callback: CallbackQuery):
 
     # Сохраняем страну (город пока пустой)
     await db.set_user_location(callback.from_user.id, country_code, "")
-    country_name = f"{COUNTRIES[country_code]['flag']} {COUNTRIES[country_code]['name']}"
+    country_name = f"{COUNTRIES[country_code]['flag']} {get_country_name(country_code, lang)}"
 
     await callback.message.edit_text(
         t(lang, "choose_city", country=country_name),
@@ -163,7 +163,7 @@ async def cb_set_city(callback: CallbackQuery, state: FSMContext):
     country, _ = await db.get_user_location(callback.from_user.id)
     await db.set_user_location(callback.from_user.id, country, city_value)
 
-    country_name = COUNTRIES.get(country, {}).get("name", country)
+    country_name = get_country_name(country, lang)
     await callback.message.edit_text(
         t(lang, "location_set", country=country_name, city=city_value),
     )
@@ -193,7 +193,7 @@ async def city_manual_entered(message: Message, state: FSMContext):
     await db.set_user_location(message.from_user.id, country, city)
     await state.clear()
 
-    country_name = COUNTRIES.get(country, {}).get("name", country)
+    country_name = get_country_name(country, lang)
     await message.answer(
         t(lang, "location_set", country=country_name, city=city),
     )
@@ -212,7 +212,7 @@ async def cmd_change_location(message: Message):
     lang = await db.get_user_lang(message.from_user.id)
     await message.answer(
         t(lang, "choose_country"),
-        reply_markup=country_select_kb(),
+        reply_markup=country_select_kb(lang),
     )
 
 
@@ -258,7 +258,7 @@ async def cmd_profile(message: Message):
     country_code = user.get("country", "")
     city = user.get("city", "")
     if country_code and city:
-        country_name = COUNTRIES.get(country_code, {}).get("name", country_code)
+        country_name = get_country_name(country_code, lang)
         location_display = f"{country_name}, {city}"
     else:
         location_display = t(lang, "location_not_set")
@@ -381,7 +381,7 @@ async def cmd_set_wallet(message: Message):
     )
 
 
-@router.callback_query(F.data.startswith("profile_"))
+@router.callback_query(F.data.startswith("profile_") & ~F.data.in_({"profile_change_lang"}))
 async def cb_view_profile(callback: CallbackQuery):
     lang = await db.get_user_lang(callback.from_user.id)
     # Проверка бана просматривающего

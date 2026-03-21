@@ -6,8 +6,8 @@ from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand, BotCommandScopeChat
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.default import DefaultBotProperties
-
-from config import BOT_TOKEN, ADMIN_ID, TRONGRID_API_KEY
+from aiogram.client.session.aiohttp import AiohttpSession
+from config import BOT_TOKEN, ADMIN_ID, TRONGRID_API_KEY, PROXY
 from database import init_db, cleanup_old_data
 from handlers.common import router as common_router
 from handlers.listings import router as listings_router
@@ -51,8 +51,10 @@ async def main():
     await init_db()
     logger.info("База данных инициализирована")
 
+    session = AiohttpSession(proxy=PROXY) if PROXY else None
     bot = Bot(
         token=BOT_TOKEN,
+        session=session,
         default=DefaultBotProperties(parse_mode="HTML"),
     )
     dp = Dispatcher(storage=MemoryStorage())
