@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+*.db
+bot.log
+.git/
+.gitignore
+README.md
+ADMIN_GUIDE.md
+ROADMAP.md

@@ -1,0 +1,25 @@
+[Unit]
+Description=HandshakeDeal Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+User=botuser
+Group=botuser
+WorkingDirectory=/home/botuser/HandshakeDealBot
+ExecStart=/usr/bin/python3 bot.py
+Restart=always
+RestartSec=10
+
+# Безопасность
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/botuser/HandshakeDealBot
+PrivateTmp=true
+
+# Переменные из .env загружаются ботом через python-dotenv
+# НЕ используем EnvironmentFile чтобы не светить в systemctl show
+
+[Install]
+WantedBy=multi-user.target
