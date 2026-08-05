@@ -861,12 +861,9 @@ async def cb_admin_disputes(callback: CallbackQuery):
         await callback.answer("⛔ Нет доступа", show_alert=True)
         return
 
-    import aiosqlite
-    from config import DB_PATH
-    async with aiosqlite.connect(DB_PATH) as conn:
-        conn.row_factory = aiosqlite.Row
-        cursor = await conn.execute("SELECT * FROM deals WHERE status = 'disputed' ORDER BY updated_at DESC")
-        disputes = [dict(r) for r in await cursor.fetchall()]
+     disputes = await db.fetch(
+        "SELECT * FROM deals WHERE status = 'disputed' ORDER BY updated_at DESC"
+    )
 
     if not disputes:
         await callback.message.edit_text("✅ Активных споров нет.")

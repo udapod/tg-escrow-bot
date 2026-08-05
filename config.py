@@ -7,6 +7,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
 BOT_COMMISSION = float(os.getenv("BOT_COMMISSION", "3"))
 BOT_WALLET = os.getenv("BOT_WALLET", "")
+BOT_WALLET_LTC = os.getenv("LTC_ESCROW_ADDRESS", "")
 TRONGRID_API_KEY = os.getenv("TRONGRID_API_KEY", "")
 MIN_DEAL_AMOUNT = float(os.getenv("MIN_DEAL_AMOUNT", "20"))
 
