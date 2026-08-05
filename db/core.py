@@ -9,77 +9,97 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
     user_id BIGINT PRIMARY KEY,
     username TEXT,
-    first_name TEXT,
-    language TEXT DEFAULT 'en',
-    country TEXT,
-    city TEXT,
-    wallet_trc20 TEXT,
-    wallet_ltc TEXT,
-    is_banned BOOLEAN DEFAULT FALSE,
-    is_vip BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    full_name TEXT,
+    wallet TEXT DEFAULT '',
+    lang TEXT DEFAULT 'ru',
+    country TEXT DEFAULT '',
+    city TEXT DEFAULT '',
+    rating REAL DEFAULT 5.0,
+    deals_count INTEGER DEFAULT 0,
+    registered_at TIMESTAMPTZ DEFAULT NOW(),
+    is_banned INTEGER DEFAULT 0,
+    referred_by BIGINT DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS listings (
-    id BIGSERIAL PRIMARY KEY,
-    seller_id BIGINT,
-    title TEXT,
-    description TEXT,
-    category TEXT,
-    currency TEXT,
-    price NUMERIC(30,8),
-    location TEXT,
-    active BOOLEAN DEFAULT TRUE,
+    id SERIAL PRIMARY KEY,
+    seller_id BIGINT NOT NULL,
+    category TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    price REAL NOT NULL,
+    photo_id TEXT DEFAULT '',
+    country TEXT DEFAULT '',
+    city TEXT DEFAULT '',
+    currency TEXT DEFAULT 'USDT',
+    is_active INTEGER DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS deals (
-    id BIGSERIAL PRIMARY KEY,
-    external_id TEXT UNIQUE,
-    listing_id BIGINT,
-    buyer_id BIGINT,
-    seller_id BIGINT,
-    currency TEXT,
-    amount NUMERIC(30,8),
-    tx_hash TEXT,
-    status TEXT DEFAULT 'pending_payment',
-    dispute BOOLEAN DEFAULT FALSE,
-    payload JSONB DEFAULT '{}'::jsonb,
+    id SERIAL PRIMARY KEY,
+    listing_id INTEGER NOT NULL,
+    seller_id BIGINT NOT NULL,
+    buyer_id BIGINT NOT NULL,
+    amount REAL NOT NULL,
+    commission REAL NOT NULL DEFAULT 0,
+    total_escrow REAL NOT NULL DEFAULT 0,
+    seller_wallet TEXT NOT NULL,
+    buyer_tx_hash TEXT DEFAULT '',
+    status TEXT DEFAULT 'created',
+    currency TEXT DEFAULT 'USDT',
+    delivered_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS reviews (
-    id BIGSERIAL PRIMARY KEY,
-    deal_id BIGINT,
-    from_id BIGINT,
-    to_id BIGINT,
-    stars INT CHECK (stars >= 1 AND stars <= 5),
-    review TEXT,
+    id SERIAL PRIMARY KEY,
+    deal_id INTEGER NOT NULL,
+    reviewer_id BIGINT NOT NULL,
+    target_id BIGINT NOT NULL,
+    rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+    comment TEXT DEFAULT '',
+    photo_id TEXT DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS disputes (
-    id BIGSERIAL PRIMARY KEY,
-    deal_id BIGINT,
-    opened_by BIGINT,
-    reason TEXT,
-    status TEXT DEFAULT 'open',
+CREATE TABLE IF NOT EXISTS vip_subscriptions (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    tx_hash TEXT DEFAULT '',
+    amount REAL NOT NULL,
+    started_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL,
+    is_active INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS deal_messages (
+    id SERIAL PRIMARY KEY,
+    deal_id INTEGER NOT NULL,
+    sender_id BIGINT NOT NULL,
+    role TEXT NOT NULL,
+    text TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-CREATE INDEX IF NOT EXISTS idx_listings_seller ON listings(seller_id);
-CREATE INDEX IF NOT EXISTS idx_listings_active ON listings(active);
-CREATE INDEX IF NOT EXISTS idx_deals_buyer ON deals(buyer_id);
-CREATE INDEX IF NOT EXISTS idx_deals_seller ON deals(seller_id);
-CREATE INDEX IF NOT EXISTS idx_deals_status ON deals(status);
-CREATE INDEX IF NOT EXISTS idx_deals_currency ON deals(currency);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_deals_currency_tx ON deals(currency, tx_hash) WHERE tx_hash IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_reviews_to ON reviews(to_id);
-CREATE INDEX IF NOT EXISTS idx_disputes_deal ON disputes(deal_id);
+CREATE TABLE IF NOT EXISTS support_messages (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    username TEXT DEFAULT '',
+    full_name TEXT DEFAULT '',
+    message TEXT NOT NULL,
+    is_read INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS favorites (
+    user_id BIGINT NOT NULL,
+    seller_id BIGINT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (user_id, seller_id)
+);
 """
-
 
 def _database_url():
     url = os.getenv("DATABASE_URL") or os.getenv("SUPABASE_DB_URL")
@@ -87,10 +107,8 @@ def _database_url():
         raise RuntimeError("DATABASE_URL is missing")
     return url
 
-
 async def get_pool():
     global _pool
-
     async with _lock:
         if _pool is None:
             _pool = await asyncpg.create_pool(
@@ -100,37 +118,32 @@ async def get_pool():
                 max_size=5,
                 command_timeout=60,
             )
-
     return _pool
-
 
 async def init_db():
     pool = await get_pool()
-
     async with pool.acquire() as conn:
         for statement in SCHEMA.split(";"):
             statement = statement.strip()
             if statement:
                 await conn.execute(statement)
 
-
 async def fetch(query: str, *args):
     pool = await get_pool()
     async with pool.acquire() as conn:
-        return await conn.fetch(query, *args)
-
+        rows = await conn.fetch(query, *args)
+        return [dict(r) for r in rows]
 
 async def fetchrow(query: str, *args):
     pool = await get_pool()
     async with pool.acquire() as conn:
-        return await conn.fetchrow(query, *args)
-
+        row = await conn.fetchrow(query, *args)
+        return dict(row) if row else None
 
 async def fetchval(query: str, *args):
     pool = await get_pool()
     async with pool.acquire() as conn:
         return await conn.fetchval(query, *args)
-
 
 async def execute(query: str, *args):
     pool = await get_pool()
