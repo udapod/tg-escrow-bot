@@ -193,6 +193,7 @@ All 222 UI strings are fully translated for every language. No mixed-language in
 - **3 attempt limit** — deal blocked after 3 failed payment verifications
 - **Contact filtering** — phone numbers and links blocked before escrow payment
 - **Admin disputes** — manual resolution when parties disagree
+ **Admin disputes** — manual resolution when parties disagree
 
 ---
 
