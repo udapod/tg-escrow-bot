@@ -17,8 +17,14 @@ from keyboards import (
 )
 from config import BOT_WALLET, ADMIN_ID, DealStatus, AUTO_COMPLETE_HOURS, MIN_DEAL_AMOUNT, CANCEL_PENALTY, calc_commission
 from languages import t, all_btn_texts
-from tron import verify_tx
+from payments.verify import verify_payment  # <-- Replaced tron.verify_tx
 from contact_filter import contains_contact
+
+# Fallback for LTC wallet if you haven't added it to config.py yet
+try:
+    from config import BOT_WALLET_LTC
+except ImportError:
+    BOT_WALLET_LTC = BOT_WALLET
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +95,10 @@ async def cb_start_deal(callback: CallbackQuery, bot: Bot):
         rate, commission = calc_commission(price, is_vip=seller_is_vip, deals_count=buyer["deals_count"])
 
     total = round(price + commission, 2)
+    
+    # Determine currency and correct escrow wallet
+    currency = listing.get("currency", "USDT_TRC20")
+    pay_wallet = BOT_WALLET_LTC if currency == "LTC" else BOT_WALLET
 
     deal_id = await db.create_deal_atomic(
         listing_id=listing_id,
@@ -121,15 +131,15 @@ async def cb_start_deal(callback: CallbackQuery, bot: Bot):
         t(buyer_lang, "deal_created",
           id=deal_id, vip_note=vip_note, title=listing["title"],
           price=price, rate=rate, commission=commission,
-          total=total, wallet=BOT_WALLET),
+          total=total, wallet=pay_wallet),
         parse_mode="HTML",
-        reply_markup=deal_pay_escrow_kb(deal_id, buyer_lang),
+        reply_markup=deal_pay_escrow_kb(deal_id, buyer_lang, currency),
     )
 
     # QR-код кошелька для удобной оплаты
     from qr_utils import generate_qr
     from aiogram.types import BufferedInputFile
-    qr_buf = generate_qr(BOT_WALLET)
+    qr_buf = generate_qr(pay_wallet)
     photo = BufferedInputFile(qr_buf.read(), filename="wallet_qr.png")
     await callback.message.answer_photo(
         photo,
@@ -209,9 +219,18 @@ async def tx_hash_entered(message: Message, state: FSMContext, bot: Bot):
     title = listing["title"] if listing else "—"
     price = deal["amount"]
 
-    # --- Автопроверка TxHash через TronGrid ---
+    # --- Автопроверка TxHash (TRC20 / LTC) ---
     verifying_msg = await message.answer(t(lang, "tx_verifying"))
-    result = await verify_tx(tx_hash, deal["total_escrow"])
+    
+    currency = deal.get("currency", "USDT_TRC20")
+    is_valid = await verify_payment(
+        currency=currency,
+        tx_hash=tx_hash,
+        amount=deal["total_escrow"]
+    )
+    
+    # Map to original expected result format to preserve error handling logic
+    result = {"ok": True} if is_valid else {"ok": False, "error": "tx_network_error"}
 
     if not result["ok"]:
         attempts += 1
@@ -378,6 +397,7 @@ async def cb_buyer_confirm(callback: CallbackQuery, bot: Bot):
     listing = await db.get_listing(deal["listing_id"])
     title = listing["title"] if listing else "—"
     payout = round(deal["amount"], 2)
+    currency = deal.get("currency", "USDT")
 
     await callback.message.edit_text(
         t(lang, "deal_completed_buyer",
@@ -405,8 +425,8 @@ async def cb_buyer_confirm(callback: CallbackQuery, bot: Bot):
         f"💸 <b>ВЫПЛАТА — Сделка #{deal_id}</b>\n\n"
         f"Продавец: {html_lib.escape(seller['full_name'])} (ID: {deal['seller_id']})\n"
         f"Покупатель: {html_lib.escape(buyer['full_name'])} (ID: {deal['buyer_id']})\n"
-        f"💵 Отправить продавцу: <b>{payout} USDT</b>\n"
-        f"📊 Комиссия бота: {deal['commission']} USDT\n"
+        f"💵 Отправить продавцу: <b>{payout} {currency}</b>\n"
+        f"📊 Комиссия бота: {deal['commission']} {currency}\n"
         f"🏦 Кошелёк продавца: <code>{deal['seller_wallet']}</code>",
         parse_mode="HTML",
     )
@@ -443,6 +463,7 @@ async def cb_cancel_deal(callback: CallbackQuery, bot: Bot):
 
     # После оплаты — отмена со штрафом
     if deal["status"] in (DealStatus.PAID, DealStatus.DELIVERED):
+        currency = deal.get("currency", "USDT")
         penalty = round(deal["amount"] * CANCEL_PENALTY / 100, 2)
         if penalty < MIN_COMMISSION:
             penalty = MIN_COMMISSION
@@ -477,9 +498,9 @@ async def cb_cancel_deal(callback: CallbackQuery, bot: Bot):
             f"⚠️ <b>ОТМЕНА СО ШТРАФОМ — Сделка #{deal_id}</b>\n\n"
             f"📌 {title}\n"
             f"Покупатель: {html_lib.escape(buyer['full_name'])} (ID: {deal['buyer_id']})\n"
-            f"💰 На эскроу: {deal['total_escrow']} USDT\n"
-            f"🔻 Штраф ({CANCEL_PENALTY}%): <b>{penalty} USDT</b>\n"
-            f"💸 Возврат покупателю: <b>{refund} USDT</b>",
+            f"💰 На эскроу: {deal['total_escrow']} {currency}\n"
+            f"🔻 Штраф ({CANCEL_PENALTY}%): <b>{penalty} {currency}</b>\n"
+            f"💸 Возврат покупателю: <b>{refund} {currency}</b>",
             parse_mode="HTML",
         )
 
@@ -530,6 +551,7 @@ async def cb_open_dispute(callback: CallbackQuery, bot: Bot):
     initiator = "Покупатель" if callback.from_user.id == deal["buyer_id"] else "Продавец"
     listing = await db.get_listing(deal["listing_id"])
     title = listing["title"] if listing else "—"
+    currency = deal.get("currency", "USDT")
 
     await bot.send_message(
         ADMIN_ID,
@@ -538,7 +560,7 @@ async def cb_open_dispute(callback: CallbackQuery, bot: Bot):
         f"Инициатор: {initiator}\n"
         f"👤 Продавец: {html_lib.escape(seller['full_name'])} (ID: {deal['seller_id']})\n"
         f"👤 Покупатель: {html_lib.escape(buyer['full_name'])} (ID: {deal['buyer_id']})\n"
-        f"💰 На эскроу: {deal['total_escrow']} USDT\n"
+        f"💰 На эскроу: {deal['total_escrow']} {currency}\n"
         f"🔗 TxID: <code>{deal['buyer_tx_hash']}</code>\n"
         f"🏦 Кошелёк продавца: <code>{deal['seller_wallet']}</code>\n\n"
         f"<b>Команды:</b>\n"
@@ -715,11 +737,12 @@ async def cmd_my_deals(message: Message):
         role = t(lang, "role_buyer") if d["buyer_id"] == message.from_user.id else t(lang, "role_seller")
         status_key = status_map.get(d["status"], "deal_status_created")
         status = t(lang, status_key)
+        currency = d.get("currency", "USDT")
 
         text_parts.append(
             f"\n#{d['id']} — <b>{title}</b>\n"
             f"  {role} | {status}\n"
-            f"  💰 {d['amount']} USDT | 📅 {d['created_at']}"
+            f"  💰 {d['amount']} {currency} | 📅 {d['created_at']}"
         )
 
     await message.answer("\n".join(text_parts), parse_mode="HTML")
@@ -852,8 +875,9 @@ async def cb_admin_disputes(callback: CallbackQuery):
 
     text_parts = ["⚖️ <b>Активные споры:</b>\n"]
     for d in disputes:
+        currency = d.get("currency", "USDT")
         text_parts.append(
-            f"\n#{d['id']} | 💰 {d['total_escrow']} USDT\n"
+            f"\n#{d['id']} | 💰 {d['total_escrow']} {currency}\n"
             f"  Продавец: {d['seller_id']} | Покупатель: {d['buyer_id']}\n"
             f"  🔗 TxID: <code>{d['buyer_tx_hash']}</code>\n"
             f"  /resolve {d['id']} seller | buyer"
@@ -886,8 +910,9 @@ async def cb_admin_escrow(callback: CallbackQuery):
     text_parts = ["🔒 <b>Эскроу-сделки (средства заморожены):</b>\n"]
     for d in escrow_deals[:20]:
         st = status_map.get(d["status"], d["status"])
+        currency = d.get("currency", "USDT")
         text_parts.append(
-            f"\n#{d['id']} | {st} | 💰 {d['total_escrow']} USDT\n"
+            f"\n#{d['id']} | {st} | 💰 {d['total_escrow']} {currency}\n"
             f"  🏦 → <code>{d['seller_wallet']}</code>"
         )
 
@@ -911,6 +936,7 @@ async def auto_complete_expired_deals(bot: Bot):
         listing = await db.get_listing(deal["listing_id"])
         title = listing["title"] if listing else "—"
         payout = round(deal["amount"], 2)
+        currency = deal.get("currency", "USDT")
 
         # Уведомление покупателю
         try:
@@ -946,7 +972,7 @@ async def auto_complete_expired_deals(bot: Bot):
                 ADMIN_ID,
                 f"💸 <b>АВТО-ВЫПЛАТА — Сделка #{deal_id}</b>\n\n"
                 f"Продавец: {html_lib.escape(seller['full_name']) if seller else deal['seller_id']}\n"
-                f"💵 Отправить: <b>{payout} USDT</b>\n"
+                f"💵 Отправить: <b>{payout} {currency}</b>\n"
                 f"🏦 Кошелёк: <code>{deal['seller_wallet']}</code>",
                 parse_mode="HTML",
             )

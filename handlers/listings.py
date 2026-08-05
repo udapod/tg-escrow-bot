@@ -12,11 +12,14 @@ from keyboards import (
     my_listing_kb,
     main_menu_kb,
     confirm_cancel_kb,
+    currency_keyboard, # <-- Added this import
 )
 from config import CATEGORIES, MIN_DEAL_AMOUNT, COUNTRIES, get_reputation_level, get_country_name
 from languages import t, all_btn_texts, get_category_name
 
 router = Router()
+
+LISTINGS_PER_PAGE = 5 # Moved to top to prevent scope errors
 
 
 class CreateListing(StatesGroup):
@@ -24,6 +27,7 @@ class CreateListing(StatesGroup):
     title = State()
     description = State()
     price = State()
+    currency = State() # <-- Added currency state
     photo = State()
 
 
@@ -36,6 +40,7 @@ class SearchState(StatesGroup):
 @router.message(Command("cancel"), CreateListing.title)
 @router.message(Command("cancel"), CreateListing.description)
 @router.message(Command("cancel"), CreateListing.price)
+@router.message(Command("cancel"), CreateListing.currency) # <-- Added
 @router.message(Command("cancel"), CreateListing.photo)
 @router.message(Command("cancel"), CreateListing.category)
 async def cancel_create_listing(message: Message, state: FSMContext):
@@ -119,7 +124,8 @@ async def listing_desc_entered(message: Message, state: FSMContext):
 async def listing_price_entered(message: Message, state: FSMContext):
     lang = await db.get_user_lang(message.from_user.id)
     try:
-        raw = message.text.strip().lower().replace("usdt", "").replace(" ", "").replace(",", ".")
+        # Added "ltc" to replacements in case user types "0.5 ltc"
+        raw = message.text.strip().lower().replace("usdt", "").replace("ltc", "").replace(" ", "").replace(",", ".")
         price = float(raw)
         if price <= 0 or price > 1_000_000:
             raise ValueError
@@ -131,8 +137,25 @@ async def listing_price_entered(message: Message, state: FSMContext):
         return
 
     await state.update_data(price=price)
-    await message.answer(t(lang, "enter_photo"))
+    
+    # --- NEW: Ask for Currency instead of jumping to photo ---
+    await message.answer(t(lang, "choose_currency"), reply_markup=currency_keyboard())
+    await state.set_state(CreateListing.currency)
+
+
+@router.callback_query(F.data.startswith("currency:"), CreateListing.currency)
+async def listing_currency_chosen(callback: CallbackQuery, state: FSMContext):
+    lang = await db.get_user_lang(callback.from_user.id)
+    currency = callback.data.split(":")[1]
+    
+    if currency not in {"USDT_TRC20", "LTC"}:
+        await callback.answer(t(lang, "error_try_again"), show_alert=True)
+        return
+        
+    await state.update_data(currency=currency)
+    await callback.message.edit_text(t(lang, "enter_photo"))
     await state.set_state(CreateListing.photo)
+    await callback.answer()
 
 
 @router.message(CreateListing.photo, F.photo)
@@ -160,6 +183,8 @@ async def _save_listing(message: Message, state: FSMContext, lang: str):
     data = await state.get_data()
     price = data["price"]
     country, city = await db.get_user_location(message.from_user.id)
+    
+    # --- NEW: Pass currency to database ---
     listing_id = await db.create_listing(
         seller_id=message.from_user.id,
         category=data["category"],
@@ -169,6 +194,7 @@ async def _save_listing(message: Message, state: FSMContext, lang: str):
         photo_id=data.get("photo_id", ""),
         country=country,
         city=city,
+        currency=data.get("currency", "USDT_TRC20"), 
     )
     await state.clear()
 
@@ -268,11 +294,14 @@ async def _show_search_results(message: Message, listings: list, query: str, pag
         vip_badge = "👑 " if seller and await db.is_vip(lst["seller_id"]) else ""
         rep_name, rep_emoji, _ = get_reputation_level(seller["deals_count"] if seller else 0)
         listing_city = lst.get("city", "")
+        
+        # --- DYNAMIC CURRENCY ---
+        currency = lst.get("currency", "USDT")
 
         card_text = (
             f"{vip_badge}📌 <b>{html_lib.escape(lst['title'])}</b>\n"
             f"📋 {html_lib.escape(lst['description'])}\n\n"
-            f"💰 {t(lang, 'price_label')}: <b>{lst['price']} USDT</b>\n"
+            f"💰 {t(lang, 'price_label')}: <b>{lst['price']} {currency}</b>\n"
             f"📍 {t(lang, 'listing_city')}: {html_lib.escape(listing_city)}\n"
             f"👤 {t(lang, 'seller')}: {vip_badge}{rep_emoji} {html_lib.escape(seller_name)} (⭐ {seller_rating})\n"
             f"🆔 #{lst['id']}"
@@ -323,9 +352,6 @@ async def cmd_catalog(message: Message):
         await message.answer(t(lang, "account_banned"))
         return
     await message.answer(t(lang, "choose_category"), reply_markup=categories_kb("browse", lang))
-
-
-LISTINGS_PER_PAGE = 5
 
 
 @router.callback_query(F.data.startswith("browse_"))
@@ -425,11 +451,14 @@ async def cb_browse_category(callback: CallbackQuery):
         vip_badge = "👑 " if seller and await db.is_vip(lst["seller_id"]) else ""
         rep_name, rep_emoji, _ = get_reputation_level(seller["deals_count"] if seller else 0)
         listing_city = lst.get("city", "")
+        
+        # --- DYNAMIC CURRENCY ---
+        currency = lst.get("currency", "USDT")
 
         card_text = (
             f"{vip_badge}📌 <b>{html_lib.escape(lst['title'])}</b>\n"
             f"📋 {html_lib.escape(lst['description'])}\n\n"
-            f"💰 {t(lang, 'price_label')}: <b>{lst['price']} USDT</b>\n"
+            f"💰 {t(lang, 'price_label')}: <b>{lst['price']} {currency}</b>\n"
             f"📍 {t(lang, 'listing_city')}: {html_lib.escape(listing_city)}\n"
             f"👤 {t(lang, 'seller')}: {vip_badge}{rep_emoji} {html_lib.escape(seller_name)} (⭐ {seller_rating})\n"
             f"🆔 #{lst['id']}"
@@ -471,9 +500,13 @@ async def cmd_my_listings(message: Message):
         cat_name = get_category_name(lst["category"], lang)
         listing_city = lst.get("city", "")
         city_line = f"📍 {listing_city}\n" if listing_city else ""
+        
+        # --- DYNAMIC CURRENCY ---
+        currency = lst.get("currency", "USDT")
+        
         card_text = (
             f"📌 <b>{html_lib.escape(lst['title'])}</b>\n"
-            f"💰 {lst['price']} USDT\n"
+            f"💰 {lst['price']} {currency}\n"
             f"📂 {cat_name}\n"
             f"{city_line}"
             f"{t(lang, 'status_label')}: {status}\n"

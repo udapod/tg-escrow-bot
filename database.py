@@ -55,6 +55,7 @@ async def init_db():
                 seller_wallet TEXT NOT NULL,
                 buyer_tx_hash TEXT DEFAULT '',
                 status TEXT DEFAULT 'created',
+                currency TEXT DEFAULT 'USDT',
                 delivered_at TEXT DEFAULT '',
                 created_at TEXT DEFAULT (datetime('now')),
                 updated_at TEXT DEFAULT (datetime('now')),
@@ -166,6 +167,18 @@ async def init_db():
             await db.commit()
         except Exception:
             pass
+        # Currency for listings
+        try:
+            await db.execute("ALTER TABLE listings ADD COLUMN currency TEXT DEFAULT 'USDT'")
+            await db.commit()
+        except Exception:
+            pass
+        # Currency for deals
+        try:
+            await db.execute("ALTER TABLE deals ADD COLUMN currency TEXT DEFAULT 'USDT'")
+            await db.commit()
+        except Exception:
+            pass
 
 
 # ————— Пользователи —————
@@ -248,11 +261,11 @@ async def ban_user(user_id: int, ban: bool = True):
 
 # ————— Объявления —————
 
-async def create_listing(seller_id: int, category: str, title: str, description: str, price: float, photo_id: str = "", country: str = "", city: str = "") -> int:
+async def create_listing(seller_id: int, category: str, title: str, description: str, price: float, photo_id: str = "", country: str = "", city: str = "", currency: str = "USDT") -> int:
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
-            "INSERT INTO listings (seller_id, category, title, description, price, photo_id, country, city) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (seller_id, category, title, description, price, photo_id, country, city),
+            "INSERT INTO listings (seller_id, category, title, description, price, photo_id, country, city, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (seller_id, category, title, description, price, photo_id, country, city, currency),
         )
         await db.commit()
         return cursor.lastrowid
@@ -339,7 +352,7 @@ async def is_tx_hash_used(tx_hash: str) -> bool:
 
 async def create_deal_atomic(listing_id: int, seller_id: int, buyer_id: int,
                              amount: float, commission: float,
-                             total_escrow: float, seller_wallet: str) -> int | None:
+                             total_escrow: float, seller_wallet: str, currency: str = None) -> int | None:
     """Атомарно создать сделку + деактивировать объявление (защита от double-buy).
     Возвращает deal_id или None если объявление уже неактивно."""
     if amount <= 0 or commission < 0 or total_escrow <= 0:
@@ -348,18 +361,23 @@ async def create_deal_atomic(listing_id: int, seller_id: int, buyer_id: int,
         await db.execute("BEGIN IMMEDIATE")
         try:
             cursor = await db.execute(
-                "SELECT is_active FROM listings WHERE id = ?", (listing_id,)
+                "SELECT is_active, currency FROM listings WHERE id = ?", (listing_id,)
             )
             row = await cursor.fetchone()
             if not row or not row[0]:
                 await db.execute("ROLLBACK")
                 return None
+            
+            # Auto-fetch currency from listing if not explicitly provided
+            if currency is None:
+                currency = row[1] if row[1] else "USDT"
+
             await db.execute(
                 "UPDATE listings SET is_active = 0 WHERE id = ?", (listing_id,)
             )
             cursor = await db.execute(
-                "INSERT INTO deals (listing_id, seller_id, buyer_id, amount, commission, total_escrow, seller_wallet) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (listing_id, seller_id, buyer_id, amount, commission, total_escrow, seller_wallet),
+                "INSERT INTO deals (listing_id, seller_id, buyer_id, amount, commission, total_escrow, seller_wallet, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (listing_id, seller_id, buyer_id, amount, commission, total_escrow, seller_wallet, currency),
             )
             deal_id = cursor.lastrowid
             await db.commit()
@@ -369,11 +387,18 @@ async def create_deal_atomic(listing_id: int, seller_id: int, buyer_id: int,
             raise
 
 
-async def create_deal(listing_id: int, seller_id: int, buyer_id: int, amount: float, commission: float, total_escrow: float, seller_wallet: str) -> int:
+async def create_deal(listing_id: int, seller_id: int, buyer_id: int, amount: float, commission: float, total_escrow: float, seller_wallet: str, currency: str = "USDT") -> int:
     async with aiosqlite.connect(DB_PATH) as db:
+        # Auto-fetch currency from listing if using default
+        if currency == "USDT":
+            cursor = await db.execute("SELECT currency FROM listings WHERE id = ?", (listing_id,))
+            row = await cursor.fetchone()
+            if row and row[0]:
+                currency = row[0]
+
         cursor = await db.execute(
-            "INSERT INTO deals (listing_id, seller_id, buyer_id, amount, commission, total_escrow, seller_wallet) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (listing_id, seller_id, buyer_id, amount, commission, total_escrow, seller_wallet),
+            "INSERT INTO deals (listing_id, seller_id, buyer_id, amount, commission, total_escrow, seller_wallet, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (listing_id, seller_id, buyer_id, amount, commission, total_escrow, seller_wallet, currency),
         )
         await db.commit()
         return cursor.lastrowid

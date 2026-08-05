@@ -71,6 +71,18 @@ def categories_kb(prefix: str = "cat", lang: str = "ru") -> InlineKeyboardMarkup
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
+# --- NEW: Currency Selection Keyboard ---
+def currency_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="USDT TRC20", callback_data="currency:USDT_TRC20"),
+                InlineKeyboardButton(text="Litecoin (LTC)", callback_data="currency:LTC")
+            ]
+        ]
+    )
+
+
 def listing_card_kb(listing_id: int, seller_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=btn(lang, "btn_start_deal"), callback_data=f"buy_{listing_id}")],
@@ -81,9 +93,15 @@ def listing_card_kb(listing_id: int, seller_id: int, lang: str = "ru") -> Inline
 
 # --- Эскроу-поток: кнопки по этапам ---
 
-def deal_pay_escrow_kb(deal_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
+def deal_pay_escrow_kb(deal_id: int, lang: str = "ru", currency: str = "USDT_TRC20") -> InlineKeyboardMarkup:
+    # Dynamic button text based on currency
+    if "LTC" in currency:
+        pay_btn_text = "✅ I sent the LTC"
+    else:
+        pay_btn_text = btn(lang, "btn_i_sent_usdt")
+
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=btn(lang, "btn_i_sent_usdt"), callback_data=f"funded_{deal_id}")],
+        [InlineKeyboardButton(text=pay_btn_text, callback_data=f"funded_{deal_id}")],
         [InlineKeyboardButton(text=btn(lang, "btn_chat"), callback_data=f"dealchat_{deal_id}")],
         [InlineKeyboardButton(text=btn(lang, "btn_cancel_deal"), callback_data=f"cancel_deal_{deal_id}")],
     ])
@@ -146,12 +164,14 @@ def back_to_menu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 def admin_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")],
-        [InlineKeyboardButton(text="� Сообщения поддержки", callback_data="admin_support")],
-        [InlineKeyboardButton(text="�🚫 Заблокировать пользователя", callback_data="admin_ban")],
+        [InlineKeyboardButton(text="💬 Сообщения поддержки", callback_data="admin_support")],
+        [InlineKeyboardButton(text="🚫 Заблокировать пользователя", callback_data="admin_ban")],
         [InlineKeyboardButton(text="✅ Разблокировать пользователя", callback_data="admin_unban")],
         [InlineKeyboardButton(text="⚖️ Активные споры", callback_data="admin_disputes")],
         [InlineKeyboardButton(text="🔒 Эскроу-сделки", callback_data="admin_escrow")],
-        [InlineKeyboardButton(text="👑 VIP-заявки", callback_data="admin_vip")],        [InlineKeyboardButton(text="👥 Рефералы", callback_data="admin_referrals")],    ])
+        [InlineKeyboardButton(text="👑 VIP-заявки", callback_data="admin_vip")],        
+        [InlineKeyboardButton(text="👥 Рефералы", callback_data="admin_referrals")],    
+    ])
 
 
 # ————— VIP —————
