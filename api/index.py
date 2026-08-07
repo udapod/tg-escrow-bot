@@ -19,14 +19,21 @@ from aiogram.client.session.aiohttp import AiohttpSession
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("escrow-webhook")
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+def _clean(value: str) -> str:
+    """Strip copy-paste contamination: quotes, spaces, KEY= prefixes."""
+    value = (value or "").strip()
+    if "=" in value and not value.startswith(("redis://", "rediss://", "unix://", "http://", "https://")):
+        value = value.split("=", 1)[1]
+    return value.strip().strip('"').strip("'").strip()
+
+BOT_TOKEN = _clean(os.getenv("BOT_TOKEN"))
 ADMIN_ID = int(os.getenv("ADMIN_ID", "0") or 0)
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-WEBHOOK_PATH = os.getenv("WEBHOOK_PATH", "telegram-webhook").strip("/")
-WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
-SETUP_SECRET = os.getenv("SETUP_SECRET")
-REDIS_URL = os.getenv("REDIS_URL")
-PROXY = os.getenv("PROXY")
+WEBHOOK_URL = _clean(os.getenv("WEBHOOK_URL"))
+WEBHOOK_PATH = _clean(os.getenv("WEBHOOK_PATH", "telegram-webhook")).strip("/")
+WEBHOOK_SECRET = _clean(os.getenv("WEBHOOK_SECRET"))
+SETUP_SECRET = _clean(os.getenv("SETUP_SECRET"))
+REDIS_URL = _clean(os.getenv("REDIS_URL"))
+PROXY = _clean(os.getenv("PROXY"))
 
 app = FastAPI(title="HandshakeDealBot Webhook")
 
