@@ -861,7 +861,7 @@ async def cb_admin_disputes(callback: CallbackQuery):
         await callback.answer("⛔ Нет доступа", show_alert=True)
         return
 
-     disputes = await db.fetch(
+    disputes = await db.fetch(
         "SELECT * FROM deals WHERE status = 'disputed' ORDER BY updated_at DESC"
     )
 
