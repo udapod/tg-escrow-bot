@@ -33,20 +33,7 @@ EN = {
     "cat_services": "🔧 Services",
 
     # ===== /start =====
-    "welcome": (
-        "🤝 <b>Welcome to HandshakeDeal!</b>\n\n"
-        "🔐 <b>Trusted escrow protection</b> for P2P deals.\n"
-        "Buy and sell goods & services safely!\n\n"
-        "🛡 <b>How it works:</b>\n"
-        "1️⃣ Seller creates a listing\n"
-        "2️⃣ Buyer sends USDT to the <b>bot's escrow wallet</b>\n"
-        "3️⃣ 🔓 Contact details are revealed\n"
-        "4️⃣ Buyer confirms receipt\n"
-        "5️⃣ Funds are released to the seller ⭐\n\n"
-        "🎁 <b>First deal is commission-free!</b>\n"
-        "❗ 2% penalty if cancelled after payment.\n\n"
-        "Use the menu below 👇"
-    ),
+    
 
     # ===== Language selection =====
     "choose_lang": "🌐 Choose language / Выберите язык / Tilni tanlang:",
