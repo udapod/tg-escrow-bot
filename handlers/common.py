@@ -65,9 +65,9 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
             except Exception as e:
                 logger.warning(f"Не удалось уведомить реферера {referred_by}: {e}")
 
-        # Новый пользователь — показываем выбор языка
+        # New user - show language selection
         await message.answer(
-            t("ru", "choose_lang"),
+            t("en", "choose_lang"),
             reply_markup=lang_select_kb(),
         )
         return
@@ -85,7 +85,7 @@ async def cmd_start(message: Message, command: CommandObject, bot: Bot):
 @router.message(Command("lang"))
 async def cmd_lang(message: Message):
     await message.answer(
-        t("ru", "choose_lang"),
+        t("en", "choose_lang"),
         reply_markup=lang_select_kb(),
     )
 

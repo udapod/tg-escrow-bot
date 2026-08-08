@@ -19,7 +19,7 @@ async def update_wallet(user_id: int, wallet: str):
 
 async def get_user_lang(user_id: int) -> str:
     row = await fetchval("SELECT lang FROM users WHERE user_id = $1", user_id)
-    return row if row else "ru"
+    return row if row else "en"
 
 async def set_user_lang(user_id: int, lang: str):
     await execute("UPDATE users SET lang = $1 WHERE user_id = $2", lang, user_id)

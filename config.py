@@ -76,8 +76,8 @@ AUTO_COMPLETE_HOURS = max(1, int(os.getenv("AUTO_COMPLETE_HOURS", "72")))
 
 # Категории объявлений
 CATEGORIES = {
-    "goods": "🛒 Товары",
-    "services": "🔧 Услуги",
+    "goods": "🛒 Goods",
+    "services": "🔧 Services",
 }
 
 # Страны и основные города
@@ -127,12 +127,12 @@ COUNTRIES = {
 }
 
 
-def get_country_name(country_code: str, lang: str = "ru") -> str:
-    """Название страны на нужном языке."""
+def get_country_name(country_code: str, lang: str = "en") -> str:
+    """Get country name in the requested language."""
     info = COUNTRIES.get(country_code, {})
     names = info.get("name", {})
     if isinstance(names, dict):
-        return names.get(lang, names.get("ru", country_code))
+        return names.get(lang, names.get("en", country_code))
     return names  # fallback for old format
 
 

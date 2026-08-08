@@ -1883,19 +1883,18 @@ for _lang_code, _translations in [("tr", TR), ("tg", TG), ("ky", KY), ("en", EN)
 
 
 def t(lang: str, key: str, **kwargs) -> str:
-    """Получить перевод по ключу и языку."""
+    """Get translation by key and language."""
     entry = TEXTS.get(key, {})
-    text = entry.get(lang, entry.get("ru", key))
+    text = entry.get(lang, entry.get("en", key))
     if kwargs:
         text = text.format(**kwargs)
     return text
 
-
 def get_category_name(key: str, lang: str) -> str:
-    """Название категории на нужном языке."""
+    """Get category name in the requested language."""
     cat_key = f"cat_{key}"
     entry = TEXTS.get(cat_key, {})
-    return entry.get(lang, entry.get("ru", key))
+    return entry.get(lang, entry.get("en", key))
 
 
 def btn(lang: str, key: str) -> str:

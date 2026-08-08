@@ -9,7 +9,7 @@ from languages import btn, get_category_name, LANGS
 
 # ————— Reply-клавиатуры —————
 
-def main_menu_kb(lang: str = "ru") -> ReplyKeyboardMarkup:
+def main_menu_kb(lang: str = "en") -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text=btn(lang, "btn_catalog")), KeyboardButton(text=btn(lang, "btn_create_listing"))],
@@ -19,7 +19,7 @@ def main_menu_kb(lang: str = "ru") -> ReplyKeyboardMarkup:
             [KeyboardButton(text=btn(lang, "btn_profile")), KeyboardButton(text=btn(lang, "btn_help"))],
             [KeyboardButton(text=btn(lang, "btn_change_location"))],
         ],
-        resize_keyboard=True,
+        resize_keyboard=Tene,
     )
 
 
@@ -33,7 +33,7 @@ def lang_select_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def country_select_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+def country_select_kb(lang: str = "en") -> InlineKeyboardMarkup:
     from config import COUNTRIES, get_country_name
     buttons = [
         [InlineKeyboardButton(
@@ -45,7 +45,7 @@ def country_select_kb(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def city_select_kb(country_code: str, lang: str = "ru") -> InlineKeyboardMarkup:
+def city_select_kb(country_code: str, lang: str = "en") -> InlineKeyboardMarkup:
     from config import CITIES
     cities = CITIES.get(country_code, [])
     buttons = []
@@ -62,7 +62,7 @@ def city_select_kb(country_code: str, lang: str = "ru") -> InlineKeyboardMarkup:
 
 # ————— Inline-клавиатуры —————
 
-def categories_kb(prefix: str = "cat", lang: str = "ru") -> InlineKeyboardMarkup:
+def categories_kb(prefix: str = "cat", lang: str = "en") -> InlineKeyboardMarkup:
     from config import CATEGORIES
     buttons = [
         [InlineKeyboardButton(text=get_category_name(key, lang), callback_data=f"{prefix}_{key}")]
@@ -83,7 +83,7 @@ def currency_keyboard() -> InlineKeyboardMarkup:
     )
 
 
-def listing_card_kb(listing_id: int, seller_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
+def listing_card_kb(listing_id: int, seller_id: int, lang: str = "en") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=btn(lang, "btn_start_deal"), callback_data=f"buy_{listing_id}")],
         [InlineKeyboardButton(text=btn(lang, "btn_seller_profile"), callback_data=f"profile_{seller_id}"),
@@ -93,7 +93,7 @@ def listing_card_kb(listing_id: int, seller_id: int, lang: str = "ru") -> Inline
 
 # --- Эскроу-поток: кнопки по этапам ---
 
-def deal_pay_escrow_kb(deal_id: int, lang: str = "ru", currency: str = "USDT_TRC20") -> InlineKeyboardMarkup:
+def deal_pay_escrow_kb(deal_id: int, lang: str = "en", currency: str = "USDT_TRC20") -> InlineKeyboardMarkup:
     # Dynamic button text based on currency
     if "LTC" in currency:
         pay_btn_text = "✅ I sent the LTC"
@@ -107,7 +107,7 @@ def deal_pay_escrow_kb(deal_id: int, lang: str = "ru", currency: str = "USDT_TRC
     ])
 
 
-def deal_seller_deliver_kb(deal_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
+def deal_seller_deliver_kb(deal_id: int, lang: str = "en") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=btn(lang, "btn_order_done"), callback_data=f"delivered_{deal_id}")],
         [InlineKeyboardButton(text=btn(lang, "btn_chat"), callback_data=f"dealchat_{deal_id}")],
@@ -115,7 +115,7 @@ def deal_seller_deliver_kb(deal_id: int, lang: str = "ru") -> InlineKeyboardMark
     ])
 
 
-def deal_buyer_confirm_kb(deal_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
+def deal_buyer_confirm_kb(deal_id: int, lang: str = "en") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=btn(lang, "btn_confirm_received"), callback_data=f"confirm_{deal_id}")],
         [InlineKeyboardButton(text=btn(lang, "btn_chat"), callback_data=f"dealchat_{deal_id}")],
@@ -124,7 +124,7 @@ def deal_buyer_confirm_kb(deal_id: int, lang: str = "ru") -> InlineKeyboardMarku
     ])
 
 
-def deal_complete_review_kb(deal_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
+def deal_complete_review_kb(deal_id: int, lang: str = "en") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=btn(lang, "btn_leave_review"), callback_data=f"review_{deal_id}")],
     ])
@@ -138,7 +138,7 @@ def review_rating_kb(deal_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[buttons])
 
 
-def confirm_cancel_kb(action: str, item_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
+def confirm_cancel_kb(action: str, item_id: int, lang: str = "en") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text=btn(lang, "btn_yes"), callback_data=f"yes_{action}_{item_id}"),
@@ -147,13 +147,13 @@ def confirm_cancel_kb(action: str, item_id: int, lang: str = "ru") -> InlineKeyb
     ])
 
 
-def my_listing_kb(listing_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
+def my_listing_kb(listing_id: int, lang: str = "en") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=btn(lang, "btn_delete_listing"), callback_data=f"del_listing_{listing_id}")],
     ])
 
 
-def back_to_menu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+def back_to_menu_kb(lang: str = "en") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=btn(lang, "btn_back_menu"), callback_data="back_menu")],
     ])
@@ -163,26 +163,26 @@ def back_to_menu_kb(lang: str = "ru") -> InlineKeyboardMarkup:
 
 def admin_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")],
-        [InlineKeyboardButton(text="💬 Сообщения поддержки", callback_data="admin_support")],
-        [InlineKeyboardButton(text="🚫 Заблокировать пользователя", callback_data="admin_ban")],
-        [InlineKeyboardButton(text="✅ Разблокировать пользователя", callback_data="admin_unban")],
-        [InlineKeyboardButton(text="⚖️ Активные споры", callback_data="admin_disputes")],
-        [InlineKeyboardButton(text="🔒 Эскроу-сделки", callback_data="admin_escrow")],
-        [InlineKeyboardButton(text="👑 VIP-заявки", callback_data="admin_vip")],        
-        [InlineKeyboardButton(text="👥 Рефералы", callback_data="admin_referrals")],    
+        [InlineKeyboardButton(text="📊 Statistics", callback_data="admin_stats")],
+        [InlineKeyboardButton(text="💬 Support Messages", callback_data="admin_support")],
+        [InlineKeyboardButton(text="🚫 Ban User", callback_data="admin_ban")],
+        [InlineKeyboardButton(text="✅ Unban User", callback_data="admin_unban")],
+        [InlineKeyboardButton(text="⚖️ Active Disputes", callback_data="admin_disputes")],
+        [InlineKeyboardButton(text="🔒 Escrow Deals", callback_data="admin_escrow")],
+        [InlineKeyboardButton(text="👑 VIP Requests", callback_data="admin_vip")],        
+        [InlineKeyboardButton(text="👥 Referrals", callback_data="admin_referrals")],    
     ])
 
 
 # ————— VIP —————
 
-def vip_buy_kb(lang: str = "ru") -> InlineKeyboardMarkup:
+def vip_buy_kb(lang: str = "en") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=btn(lang, "btn_buy_vip"), callback_data="vip_buy")],
     ])
 
 
-def vip_paid_kb(sub_id: int, lang: str = "ru") -> InlineKeyboardMarkup:
+def vip_paid_kb(sub_id: int, lang: str = "en") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text=btn(lang, "btn_i_paid_vip"), callback_data=f"vip_paid_{sub_id}")],
         [InlineKeyboardButton(text=btn(lang, "btn_cancel"), callback_data="vip_cancel")],

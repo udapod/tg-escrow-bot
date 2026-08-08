@@ -242,11 +242,11 @@ async def tx_hash_entered(message: Message, state: FSMContext, bot: Bot):
         await verifying_msg.delete()
 
         # Уведомление админу о неудачной попытке
-        reason = t("ru", error_key, **kwargs)
+        reason = t("en", error_key, **kwargs)
         try:
             await bot.send_message(
                 ADMIN_ID,
-                t("ru", "tx_admin_failed",
+                t("en", "tx_admin_failed",
                   id=deal_id, title=title,
                   buyer_id=message.from_user.id,
                   seller_id=deal["seller_id"],
@@ -267,7 +267,7 @@ async def tx_hash_entered(message: Message, state: FSMContext, bot: Bot):
             try:
                 await bot.send_message(
                     ADMIN_ID,
-                    t("ru", "tx_admin_blocked",
+                    t("en", "tx_admin_blocked",
                       id=deal_id, title=title,
                       buyer_id=message.from_user.id,
                       seller_id=deal["seller_id"],
@@ -289,7 +289,7 @@ async def tx_hash_entered(message: Message, state: FSMContext, bot: Bot):
     try:
         await bot.send_message(
             ADMIN_ID,
-            t("ru", "tx_admin_verified",
+            t("en", "tx_admin_verified",
               id=deal_id, title=title,
               buyer_id=message.from_user.id,
               seller_id=deal["seller_id"],
@@ -548,25 +548,25 @@ async def cb_open_dispute(callback: CallbackQuery, bot: Bot):
     # Уведомление админу (на русском)
     buyer = await db.get_user(deal["buyer_id"])
     seller = await db.get_user(deal["seller_id"])
-    initiator = "Покупатель" if callback.from_user.id == deal["buyer_id"] else "Продавец"
+    initiator = "Buyer" if callback.from_user.id == deal["buyer_id"] else "Seller"
     listing = await db.get_listing(deal["listing_id"])
     title = listing["title"] if listing else "—"
     currency = deal.get("currency", "USDT")
 
     await bot.send_message(
         ADMIN_ID,
-        f"🚨 <b>СПОР по сделке #{deal_id}</b>\n\n"
+        f"🚨 <b>DISPUTE on Deal #{deal_id}</b>\n\n"
         f"📌 {html_lib.escape(title)}\n"
-        f"Инициатор: {initiator}\n"
-        f"👤 Продавец: {html_lib.escape(seller['full_name'])} (ID: {deal['seller_id']})\n"
-        f"👤 Покупатель: {html_lib.escape(buyer['full_name'])} (ID: {deal['buyer_id']})\n"
-        f"💰 На эскроу: {deal['total_escrow']} {currency}\n"
+        f"Initiator: {initiator}\n"
+        f"👤 Seller: {html_lib.escape(seller['full_name'])} (ID: {deal['seller_id']})\n"
+        f"👤 Buyer: {html_lib.escape(buyer['full_name'])} (ID: {deal['buyer_id']})\n"
+        f"💰 In Escrow: {deal['total_escrow']} {currency}\n"
         f"🔗 TxID: <code>{deal['buyer_tx_hash']}</code>\n"
-        f"🏦 Кошелёк продавца: <code>{deal['seller_wallet']}</code>\n\n"
-        f"<b>Команды:</b>\n"
-        f"/resolve {deal_id} seller — выплатить продавцу\n"
-        f"/resolve {deal_id} buyer — вернуть покупателю\n"
-        f"/chatlog {deal_id} — история переписки",
+        f"🏦 Seller Wallet: <code>{deal['seller_wallet']}</code>\n\n"
+        f"<b>Commands:</b>\n"
+        f"/resolve {deal_id} seller — pay seller\n"
+        f"/resolve {deal_id} buyer — refund buyer\n"
+        f"/chatlog {deal_id} — chat history",
         parse_mode="HTML",
     )
 
@@ -583,15 +583,15 @@ async def cmd_resolve_deal(message: Message, bot: Bot):
     parts = message.text.split()
     if len(parts) < 3:
         await message.answer(
-            "Использование:\n"
-            "/resolve <ID> <b>seller</b> — выплатить продавцу\n"
-            "/resolve <ID> <b>buyer</b> — вернуть покупателю",
+            "Usage:\n"
+            "/resolve <ID> <b>seller</b> — pay seller\n"
+            "/resolve <ID> <b>buyer</b> — refund buyer",
             parse_mode="HTML",
         )
         return
 
     if not parts[1].isdigit():
-        await message.answer("ID сделки должен быть числом.")
+        await message.answer("Deal ID must be a number.")
         return
 
     deal_id = int(parts[1])
@@ -606,17 +606,17 @@ async def cmd_resolve_deal(message: Message, bot: Bot):
     title = listing["title"] if listing else "—"
 
     if action not in ("seller", "buyer"):
-        await message.answer("Действие: <b>seller</b> или <b>buyer</b>", parse_mode="HTML")
+        await message.answer("Action: <b>seller</b> or <b>buyer</b>", parse_mode="HTML")
         return
 
     # Подтверждение перед выполнением
     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
     if action == "seller":
         payout = round(deal["amount"], 2)
-        confirm_text = t("ru", "resolve_confirm_seller",
+        confirm_text = t("en", "resolve_confirm_seller",
                          id=deal_id, payout=payout, wallet=deal["seller_wallet"])
     else:
-        confirm_text = t("ru", "resolve_confirm_buyer",
+        confirm_text = t("en", "resolve_confirm_buyer",
                          id=deal_id, total=deal["total_escrow"])
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -967,10 +967,10 @@ async def auto_complete_expired_deals(bot: Bot):
             seller = await db.get_user(deal["seller_id"])
             await bot.send_message(
                 ADMIN_ID,
-                f"💸 <b>АВТО-ВЫПЛАТА — Сделка #{deal_id}</b>\n\n"
-                f"Продавец: {html_lib.escape(seller['full_name']) if seller else deal['seller_id']}\n"
-                f"💵 Отправить: <b>{payout} {currency}</b>\n"
-                f"🏦 Кошелёк: <code>{deal['seller_wallet']}</code>",
+                f"💸 <b>AUTO-PAYOUT — Deal #{deal_id}</b>\n\n"
+                f"Seller: {html_lib.escape(seller['full_name']) if seller else deal['seller_id']}\n"
+                f"💵 Send: <b>{payout} {currency}</b>\n"
+                f"🏦 Wallet: <code>{deal['seller_wallet']}</code>",
                 parse_mode="HTML",
             )
         except Exception as e:

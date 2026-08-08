@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT,
     full_name TEXT,
     wallet TEXT DEFAULT '',
-    lang TEXT DEFAULT 'ru',
+    lang TEXT DEFAULT 'en',
     country TEXT DEFAULT '',
     city TEXT DEFAULT '',
     rating REAL DEFAULT 5.0,
