@@ -19,7 +19,7 @@ def main_menu_kb(lang: str = "en") -> ReplyKeyboardMarkup:
             [KeyboardButton(text=btn(lang, "btn_profile")), KeyboardButton(text=btn(lang, "btn_help"))],
             [KeyboardButton(text=btn(lang, "btn_change_location"))],
         ],
-        resize_keyboard=Tene,
+        resize_keyboard=True,
     )
 
 
