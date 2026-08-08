@@ -172,49 +172,54 @@ TEXTS = {
     },
 
     # ===== /start =====
-    "welcome": {
+        "welcome": {
         "ru": (
-            "🤝 <b>Добро пожаловать в HandshakeDeal!</b>\n\n"
-            "🔐 <b>Надёжный эскроу-гарант</b> для P2P-сделок.\n"
-            "Покупайте и продавайте товары и услуги без риска!\n\n"
-            "🛡 <b>Как это работает:</b>\n"
-            "1️⃣ Продавец создаёт объявление\n"
-            "2️⃣ Покупатель отправляет USDT на <b>эскроу-кошелёк бота</b>\n"
-            "3️⃣ 🔓 Контакты разблокируются — можно договориться о встрече\n"
-            "4️⃣ Покупатель подтверждает получение\n"
-            "5️⃣ Средства отправляются продавцу ⭐\n\n"
-            "🎁 <b>Первая сделка без комиссии!</b>\n"
-            "❗ При отмене после оплаты удерживается штраф 2%.\n\n"
-            "Используйте меню ниже 👇"
+            "🕊 <b>YEETOP ESCROW BOT</b> 🕊\n"
+            "Automated Escrow for Safe Transactions\n\n"
+            "Yo, welcome to YeeTopEscrowBot—your ultimate shield in these gritty streets of Telegram deals. We put your money on lockdown with military-grade security— no switch-ups. Your bread stays safe till the deal is done.\n\n"
+            "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+            "💰 <b>ESCROW FEE:</b>\n"
+            "5% for amounts over $100\n"
+            "$5 for amounts under $100\n\n"
+            "ℹ️ <b>How To Use YEETOP ESCROW BOT?</b>\n\n"
+            "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+            "1️⃣ Create a new Group Chat with seller / buyer and add the bot.\n\n"
+            "2️⃣ Seller: Declare your role by using the command <code>/seller LTC/USDT(trc20) ADDRESS</code>, replacing LTC/USDT(trc20) ADDRESS with your respective wallet address.\n\n"
+            "3️⃣ Buyer: Declare your role by using the command <code>/buyer LTC/USDT(trc20) ADDRESS</code>, replacing LTC/USDT(trc20) ADDRESS with your respective wallet address.\n\n"
+            "4️⃣ The bot will generate an escrow address automatically.\n\n"
+            "5️⃣ Both buyer and seller verify the generated escrow address in @YeetopVerifyBot.\n\n"
+            "6️⃣ The buyer sends the agreed amount to the ESCROW address.\n\n"
+            "7️⃣ Check the balance using the command <code>/balance</code>.\n\n"
+            "8️⃣ The seller releases the product/service to the buyer once the balance is confirmed.\n\n"
+            "9️⃣ When the buyer is satisfied, release the payment using <code>/payseller</code>. Alternatively, the seller can initiate a refund to the buyer using <code>/refundbuyer</code>.\n\n"
+            "🔟 Got beef with a deal? Hit <code>/contact Invite/Group chat link</code> and our arbitrators will slide into your chat within 24 hours to settle it. No runnin', no duckin'—just fair play."
         ),
-        "uz": (
-            "🤝 <b>HandshakeDeal'ga xush kelibsiz!</b>\n\n"
-            "🔐 <b>Ishonchli eskrou-kafolat</b> P2P-bitimlar uchun.\n"
-            "Tovar va xizmatlarni xavfsiz sotib oling va soting!\n\n"
-            "🛡 <b>Qanday ishlaydi:</b>\n"
-            "1️⃣ Sotuvchi e'lon yaratadi\n"
-            "2️⃣ Xaridor USDT ni <b>bot eskrou-hamyoniga</b> yuboradi\n"
-            "3️⃣ 🔓 Kontaktlar ochiladi — uchrashuvni kelishish mumkin\n"
-            "4️⃣ Xaridor qabul qilganini tasdiqlaydi\n"
-            "5️⃣ Mablag' sotuvchiga yuboriladi ⭐\n\n"
-            "🎁 <b>Birinchi bitim komissiyasiz!</b>\n"
-            "❗ To'lovdan keyin bekor qilinsa 2% jarima ushlanadi.\n\n"
-            "Quyidagi menyudan foydalaning 👇"
+        "en": (
+            "🕊 <b>YEETOP ESCROW BOT</b> 🕊\n"
+            "Automated Escrow for Safe Transactions\n\n"
+            "Yo, welcome to YeeTopEscrowBot—your ultimate shield in these gritty streets of Telegram deals. We put your money on lockdown with military-grade security— no switch-ups. Your bread stays safe till the deal is done.\n\n"
+            "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+            "💰 <b>ESCROW FEE:</b>\n"
+            "5% for amounts over $100\n"
+            "$5 for amounts under $100\n\n"
+            "ℹ️ <b>How To Use YEETOP ESCROW BOT?</b>\n\n"
+            "➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖\n\n"
+            "1️⃣ Create a new Group Chat with seller / buyer and add the bot.\n\n"
+            "2️⃣ Seller: Declare your role by using the command <code>/seller LTC/USDT(trc20) ADDRESS</code>, replacing LTC/USDT(trc20) ADDRESS with your respective wallet address.\n\n"
+            "3️⃣ Buyer: Declare your role by using the command <code>/buyer LTC/USDT(trc20) ADDRESS</code>, replacing LTC/USDT(trc20) ADDRESS with your respective wallet address.\n\n"
+            "4️⃣ The bot will generate an escrow address automatically.\n\n"
+            "5️⃣ Both buyer and seller verify the generated escrow address in @YeetopVerifyBot.\n\n"
+            "6️⃣ The buyer sends the agreed amount to the ESCROW address.\n\n"
+            "7️⃣ Check the balance using the command <code>/balance</code>.\n\n"
+            "8️⃣ The seller releases the product/service to the buyer once the balance is confirmed.\n\n"
+            "9️⃣ When the buyer is satisfied, release the payment using <code>/payseller</code>. Alternatively, the seller can initiate a refund to the buyer using <code>/refundbuyer</code>.\n\n"
+            "🔟 Got beef with a deal? Hit <code>/contact Invite/Group chat link</code> and our arbitrators will slide into your chat within 24 hours to settle it. No runnin', no duckin'—just fair play."
         ),
-        "kk": (
-            "🤝 <b>HandshakeDeal-ға қош келдіңіз!</b>\n\n"
-            "🔐 <b>Сенімді эскроу-кепілдік</b> P2P-мәмілелер үшін.\n"
-            "Тауарлар мен қызметтерді қауіпсіз сатып алыңыз!\n\n"
-            "🛡 <b>Қалай жұмыс істейді:</b>\n"
-            "1️⃣ Сатушы хабарландыру жасайды\n"
-            "2️⃣ Сатып алушы USDT-ні <b>бот эскроу-әмиянына</b> жібереді\n"
-            "3️⃣ 🔓 Байланыстар ашылады — кездесуді келісуге болады\n"
-            "4️⃣ Сатып алушы алғанын растайды\n"
-            "5️⃣ Қаражат сатушыға жіберіледі ⭐\n\n"
-            "🎁 <b>Бірінші мәміле комиссиясыз!</b>\n"
-            "❗ Төлемнен кейін болдырмаса 2% айыппұл ұсталады.\n\n"
-            "Төмендегі мәзірді пайдаланыңыз 👇"
-        ),
+        "uz": "🕊 <b>YEETOP ESCROW BOT</b> 🕊\n(Translation pending)",
+        "kk": "🕊 <b>YEETOP ESCROW BOT</b> 🕊\n(Translation pending)",
+        "tr": "🕊 <b>YEETOP ESCROW BOT</b> 🕊\n(Translation pending)",
+        "tg": "🕊 <b>YEETOP ESCROW BOT</b> 🕊\n(Translation pending)",
+        "ky": "🕊 <b>YEETOP ESCROW BOT</b> 🕊\n(Translation pending)"
     },
 
     # ===== Выбор языка =====
@@ -1883,18 +1888,19 @@ for _lang_code, _translations in [("tr", TR), ("tg", TG), ("ky", KY), ("en", EN)
 
 
 def t(lang: str, key: str, **kwargs) -> str:
-    """Get translation by key and language."""
+    """Получить перевод по ключу и языку."""
     entry = TEXTS.get(key, {})
-    text = entry.get(lang, entry.get("en", key))
+    text = entry.get(lang, entry.get("ru", key))
     if kwargs:
         text = text.format(**kwargs)
     return text
 
+
 def get_category_name(key: str, lang: str) -> str:
-    """Get category name in the requested language."""
+    """Название категории на нужном языке."""
     cat_key = f"cat_{key}"
     entry = TEXTS.get(cat_key, {})
-    return entry.get(lang, entry.get("en", key))
+    return entry.get(lang, entry.get("ru", key))
 
 
 def btn(lang: str, key: str) -> str:
