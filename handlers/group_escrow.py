@@ -2,7 +2,7 @@ from aiogram import Router, F, Bot
 from aiogram.types import Message
 from aiogram.filters import Command
 import database as db
-from config import BOT_WALLET, LTC_ESCROW_ADDRESS, ADMIN_GROUP_ID
+from config import BOT_WALLET, BOT_WALLET_LTC, ADMIN_GROUP_ID
 
 router = Router()
 
@@ -67,7 +67,7 @@ async def check_deal_ready(message: Message, bot: Bot):
         await db.execute("UPDATE group_deals SET status = 'active' WHERE chat_id = $1", chat_id)
         
         currency = deal['currency']
-        escrow_addr = LTC_ESCROW_ADDRESS if currency == 'LTC' else BOT_WALLET
+                escrow_addr = BOT_WALLET_LTC if currency == 'LTC' else BOT_WALLET
         
         text = (
             f"🤝 <b>DEAL ACTIVE</b>\n\n"
