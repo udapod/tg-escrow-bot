@@ -45,7 +45,7 @@ def parse_role_args(message: Message):
         if currency is None:
             return ("ERR", f"⛔ Unsupported currency <b>{parts[1]}</b>.\nUse <b>USDT</b> or <b>LTC</b>.")
         if not validate_wallet(currency, wallet):
-            return ("ERR", f"️ That is <b>NOT a valid {currency} address</b>.\nDouble-check the address and try again.")
+            return ("ERR", f"⛔ That is <b>NOT a valid {currency} address</b>.\nDouble-check the address and try again.")
         return (currency, wallet)
 
     if len(parts) == 2:
@@ -71,6 +71,13 @@ async def dm_block(message: Message):
         parse_mode="HTML",
     )
 
+def mismatch_error(locked: str, other_role: str) -> str:
+    return (
+        f"⛔ <b>CURRENCY MISMATCH.</b>\n"
+        f"The {other_role} locked this deal to <b>{locked}</b>.\n"
+        f"You must also use <b>{locked}</b>."
+    )
+
 # ————— /seller —————
 
 @router.message(Command("seller"))
@@ -87,15 +94,25 @@ async def cmd_seller(message: Message, bot: Bot):
     deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1", chat_id)
 
     if deal:
+        locked = deal['currency']
+
         if deal['buyer_id'] == user_id:
             return await message.answer("⛔ You are already the <b>Buyer</b> in this deal. You cannot switch roles.", parse_mode="HTML")
+
         if deal['seller_id'] == user_id:
+            if deal['buyer_id'] is not None and locked and currency != locked:
+                return await message.answer(f"⛔ This deal is locked to <b>{locked}</b> by the buyer. You cannot change the network.", parse_mode="HTML")
             await db.execute("UPDATE group_deals SET seller_wallet = $1, currency = $2 WHERE chat_id = $3", wallet, currency, chat_id)
             await message.answer(f"✅ <b>Seller wallet updated.</b>\n💳 Network: {currency}\n🏦 <code>{wallet}</code>", parse_mode="HTML")
             await check_deal_ready(message, bot)
             return
+
         if deal['seller_id'] is not None:
             return await message.answer("⛔ A seller is already registered for this deal. You cannot override them.", parse_mode="HTML")
+
+        if locked and currency != locked:
+            return await message.answer(mismatch_error(locked, "buyer"), parse_mode="HTML")
+
         await db.execute("UPDATE group_deals SET seller_id = $1, seller_wallet = $2, currency = $3 WHERE chat_id = $4", user_id, wallet, currency, chat_id)
     else:
         await db.execute("INSERT INTO group_deals (chat_id, seller_id, seller_wallet, currency) VALUES ($1, $2, $3, $4)", chat_id, user_id, wallet, currency)
@@ -125,15 +142,25 @@ async def cmd_buyer(message: Message, bot: Bot):
     deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1", chat_id)
 
     if deal:
+        locked = deal['currency']
+
         if deal['seller_id'] == user_id:
             return await message.answer("⛔ You are already the <b>Seller</b> in this deal. You cannot switch roles.", parse_mode="HTML")
+
         if deal['buyer_id'] == user_id:
+            if deal['seller_id'] is not None and locked and currency != locked:
+                return await message.answer(f"⛔ This deal is locked to <b>{locked}</b> by the seller. You cannot change the network.", parse_mode="HTML")
             await db.execute("UPDATE group_deals SET buyer_wallet = $1, currency = $2 WHERE chat_id = $3", wallet, currency, chat_id)
             await message.answer(f"✅ <b>Buyer wallet updated.</b>\n💳 Network: {currency}\n🏦 <code>{wallet}</code>", parse_mode="HTML")
             await check_deal_ready(message, bot)
             return
+
         if deal['buyer_id'] is not None:
             return await message.answer("⛔ A buyer is already registered for this deal. You cannot override them.", parse_mode="HTML")
+
+        if locked and currency != locked:
+            return await message.answer(mismatch_error(locked, "seller"), parse_mode="HTML")
+
         await db.execute("UPDATE group_deals SET buyer_id = $1, buyer_wallet = $2, currency = $3 WHERE chat_id = $4", user_id, wallet, currency, chat_id)
     else:
         await db.execute("INSERT INTO group_deals (chat_id, buyer_id, buyer_wallet, currency) VALUES ($1, $2, $3, $4)", chat_id, user_id, wallet, currency)
