@@ -35,7 +35,7 @@ SETUP_SECRET = _clean(os.getenv("SETUP_SECRET"))
 REDIS_URL = _clean(os.getenv("REDIS_URL"))
 PROXY = _clean(os.getenv("PROXY"))
 
-app = FastAPI(title="HandshakeDealBot Webhook")
+app = FastAPI(title="YeetopEscrowBot Webhook")
 
 bot = None
 dp = None
@@ -61,15 +61,13 @@ if BOT_TOKEN and REDIS_URL:
 
         dp = Dispatcher(storage=storage)
 
+        # --- NEW ROUTERS ---
         from handlers.common import router as common_router
-        from handlers.listings import router as listings_router
-        from handlers.deals import router as deals_router
-        from handlers.vip import router as vip_router
+        from handlers.group_escrow import router as group_escrow_router
 
         dp.include_router(common_router)
-        dp.include_router(listings_router)
-        dp.include_router(deals_router)
-        dp.include_router(vip_router)
+        dp.include_router(group_escrow_router)
+        # -------------------
 
         logger.info("ROUTERS_LOADED")
     except Exception:
@@ -99,25 +97,29 @@ async def register_commands():
     if not bot:
         return
 
+    # DM Commands
     user_commands = [
-        BotCommand(command="start", description="Start / Restart bot"),
-        BotCommand(command="help", description="Help"),
-        BotCommand(command="wallet", description="Set payout wallet"),
-        BotCommand(command="lang", description="Change language"),
-        BotCommand(command="location", description="Change location"),
-        BotCommand(command="support", description="Support"),
-        BotCommand(command="cancel", description="Cancel current action"),
-        BotCommand(command="qr", description="QR code"),
+        BotCommand(command="start", description="Start the bot / View instructions"),
+        BotCommand(command="terms", description="Read Terms of Service"),
+        BotCommand(command="contactadmin", description="Request admin support"),
+    ]
+
+    # Group Commands
+    group_commands = user_commands + [
+        BotCommand(command="seller", description="Register as seller: /seller CURRENCY WALLET"),
+        BotCommand(command="buyer", description="Register as buyer: /buyer CURRENCY WALLET"),
+        BotCommand(command="payseller", description="Release funds to seller"),
+        BotCommand(command="refundbuyer", description="Refund buyer"),
     ]
 
     await bot.set_my_commands(user_commands)
+    # Note: Group commands are shown automatically when typing '/' in groups
 
     if ADMIN_ID:
-        admin_commands = user_commands + [
-            BotCommand(command="admin", description="Admin panel"),
-            BotCommand(command="chatlog", description="Deal chat log"),
+        admin_commands = [
+            BotCommand(command="start", description="Start the bot"),
+            BotCommand(command="terms", description="Read Terms of Service"),
         ]
-
         await bot.set_my_commands(
             admin_commands,
             scope=BotCommandScopeChat(chat_id=ADMIN_ID),

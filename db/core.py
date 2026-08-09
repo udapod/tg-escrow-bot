@@ -99,6 +99,20 @@ CREATE TABLE IF NOT EXISTS favorites (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (user_id, seller_id)
 );
+
+
+
+CREATE TABLE IF NOT EXISTS group_deals (
+    id SERIAL PRIMARY KEY,
+    chat_id BIGINT NOT NULL UNIQUE,
+    seller_id BIGINT,
+    seller_wallet TEXT,
+    buyer_id BIGINT,
+    buyer_wallet TEXT,
+    currency TEXT,
+    status TEXT DEFAULT 'setup',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 """
 
 def _database_url():
