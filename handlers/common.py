@@ -1,4 +1,4 @@
-from aiogram import Router, F, Bot
+from aiogram import Router, Bot
 from aiogram.types import Message
 from aiogram.filters import Command, CommandStart
 from languages import t
@@ -10,13 +10,10 @@ def is_group(message: Message) -> bool:
     return message.chat.type in ["group", "supergroup"]
 
 async def dm_block(message: Message):
-    await message.answer("⛔ <b>Can't use bot in DM.</b>\n\nCreate a group chat, add the bot, and use commands there.", parse_mode="HTML")
+    await message.answer("⛔ <b>You can only use this command inside a group chat.</b>\n\nKindly make a group chat and add the bot.", parse_mode="HTML")
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
-    # Welcome message is handled by languages.py 'welcome' key
-    # But since we are removing the catalog, we just send the text directly or use t()
-    # For simplicity, we use the 'welcome' key from languages.py which you already updated
     await message.answer(t(message.from_user.language_code or "en", "welcome"), parse_mode="HTML")
 
 @router.message(Command("terms"))
@@ -36,7 +33,7 @@ async def cmd_terms(message: Message):
 async def cmd_contact(message: Message, bot: Bot):
     if not is_group(message): return await dm_block(message)
     if not ADMIN_GROUP_ID:
-        return await message.answer("Admin contact not configured.")
+        return await message.answer("⛔ Admin contact not configured.")
         
     try:
         link = await bot.export_chat_invite_link(message.chat.id)
@@ -49,4 +46,4 @@ async def cmd_contact(message: Message, bot: Bot):
         )
         await message.answer("✅ Admins have been notified.")
     except Exception:
-        await message.answer("Failed to contact admins.")
+        await message.answer("⛔ Failed to contact admins.")
