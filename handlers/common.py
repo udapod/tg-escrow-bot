@@ -2,11 +2,11 @@ import qrcode
 from io import BytesIO
 
 from aiogram import Router, Bot, F
-from aiogram.types import Message, BufferedInputFile
+from aiogram.types import Message, CallbackQuery, BufferedInputFile, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command, CommandStart
 import database as db
 from languages import t
-from config import ADMIN_GROUP_ID, BOT_WALLET, BOT_WALLET_LTC, ADMIN_ID
+from config import ADMIN_GROUP_ID, BOT_WALLET, BOT_WALLET_LTC, ADMIN_ID, REVIEW_CHANNEL_ID
 
 def display_currency(currency: str) -> str:
     if currency == "USDT":
@@ -27,71 +27,11 @@ async def dm_block(message: Message):
         parse_mode="HTML",
     )
 
-@router.message(CommandStart())
-async def cmd_start(message: Message, bot: Bot):
-    if is_group(message):
-        deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1", message.chat.id)
-        if deal and deal['status'] in ('setup', 'active'):
-            return await message.answer(
-                "⚠️ <b>A deal is already in progress in this group.</b>\n\n"
-                "Please finish or cancel the current deal before starting a new one.",
-                parse_mode="HTML",
-            )
-    await message.answer(t(message.from_user.language_code or "en", "welcome"), parse_mode="HTML")
-
-@router.message(Command("chatid"))
-async def cmd_chatid(message: Message):
-    await message.answer(f" Chat ID: <code>{message.chat.id}</code>", parse_mode="HTML")
-
-@router.message(Command("addadmin"))
-async def cmd_addadmin(message: Message):
-    if message.from_user.id != ADMIN_ID:
-        return await message.answer("⛔ Root admin access required.", parse_mode="HTML")
-    
-    parts = message.text.split()
-    if len(parts) < 2 or not parts[1].isdigit():
-        return await message.answer("Usage: <code>/addadmin USER_ID</code>", parse_mode="HTML")
-    
-    uid = int(parts[1])
-    await db.execute("INSERT INTO bot_admins (user_id) VALUES ($1) ON CONFLICT DO NOTHING", uid)
-    await message.answer(f"✅ Admin <code>{uid}</code> added successfully.", parse_mode="HTML")
-
-@router.message(Command("qr"))
-async def cmd_qr(message: Message, bot: Bot):
+# --- Helper for Terms ---
+async def process_terms(message: Message):
     if not is_group(message):
         return await dm_block(message)
-
-    deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1 AND status = 'active'", message.chat.id)
-
-    if not deal:
-        return await message.answer("⛔ No active deal found here, press /start to start a new deal.", parse_mode="HTML")
-
-    currency = deal['currency']
-    escrow_addr = BOT_WALLET_LTC if currency == 'LTC' else BOT_WALLET
-
-    if not escrow_addr:
-        return await message.answer("⛔ Escrow wallet not configured by the admins.", parse_mode="HTML")
-
-    img = qrcode.make(escrow_addr)
-    buf = BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-
-    await message.answer_photo(
-        BufferedInputFile(buf.read(), filename="escrow_qr.png"),
-        caption=(
-            f"💰 <b>Escrow Address QR</b>\n"
-            f"⚠️ Network: <b>{display_currency(currency)}</b>\n"
-            f"<code>{escrow_addr}</code>"
-        ),
-        parse_mode="HTML",
-    )
-
-@router.message(Command("terms"))
-async def cmd_terms(message: Message):
-    if not is_group(message):
-        return await dm_block(message)
-
+        
     text = (
         "<b>⚖️ TERMS OF SERVICE</b>\n\n"
         "<b>YEETOP ESCROW BOT</b>\n\n"
@@ -126,8 +66,8 @@ async def cmd_terms(message: Message):
     )
     await message.answer(text, parse_mode="HTML")
 
-@router.message(Command("contactadmin"))
-async def cmd_contact(message: Message, bot: Bot):
+# --- Helper for Contact Admin ---
+async def process_contact_admin(message: Message, bot: Bot):
     if not is_group(message):
         return await dm_block(message)
 
@@ -158,3 +98,101 @@ async def cmd_contact(message: Message, bot: Bot):
             "<code>ADMIN_GROUP_ID</code> (use /chatid in that group to get it).",
             parse_mode="HTML",
         )
+
+# ————— /start —————
+
+@router.message(CommandStart())
+async def cmd_start(message: Message, bot: Bot):
+    if is_group(message):
+        deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1", message.chat.id)
+        if deal and deal['status'] in ('setup', 'active'):
+            return await message.answer(
+                "⚠️ <b>A deal is already in progress in this group.</b>\n\n"
+                "Please finish or cancel the current deal before starting a new one.",
+                parse_mode="HTML",
+            )
+            
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="⚖️ Terms of Service", callback_data="btn_terms"),
+            InlineKeyboardButton(text="🚨 Contact Admin", callback_data="btn_contact_admin"),
+        ]
+    ])
+    
+    await message.answer(t(message.from_user.language_code or "en", "welcome"), parse_mode="HTML", reply_markup=kb)
+
+# ————— /chatid —————
+
+@router.message(Command("chatid"))
+async def cmd_chatid(message: Message):
+    await message.answer(f" Chat ID: <code>{message.chat.id}</code>", parse_mode="HTML")
+
+# ————— /addadmin —————
+
+@router.message(Command("addadmin"))
+async def cmd_addadmin(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        return await message.answer("⛔ Root admin access required.", parse_mode="HTML")
+    
+    parts = message.text.split()
+    if len(parts) < 2 or not parts[1].isdigit():
+        return await message.answer("Usage: <code>/addadmin USER_ID</code>", parse_mode="HTML")
+    
+    uid = int(parts[1])
+    await db.execute("INSERT INTO bot_admins (user_id) VALUES ($1) ON CONFLICT DO NOTHING", uid)
+    await message.answer(f"✅ Admin <code>{uid}</code> added successfully.", parse_mode="HTML")
+
+# ————— /qr —————
+
+@router.message(Command("qr"))
+async def cmd_qr(message: Message, bot: Bot):
+    if not is_group(message):
+        return await dm_block(message)
+
+    deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1 AND status = 'active'", message.chat.id)
+
+    if not deal:
+        return await message.answer("⛔ No active deal found here, press /start to start a new deal.", parse_mode="HTML")
+
+    currency = deal['currency']
+    escrow_addr = BOT_WALLET_LTC if currency == 'LTC' else BOT_WALLET
+
+    if not escrow_addr:
+        return await message.answer("⛔ Escrow wallet not configured by the admins.", parse_mode="HTML")
+
+    img = qrcode.make(escrow_addr)
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+
+    await message.answer_photo(
+        BufferedInputFile(buf.read(), filename="escrow_qr.png"),
+        caption=(
+            f"💰 <b>Escrow Address QR</b>\n"
+            f"⚠️ Network: <b>{display_currency(currency)}</b>\n"
+            f"<code>{escrow_addr}</code>"
+        ),
+        parse_mode="HTML",
+    )
+
+# ————— /terms & Button —————
+
+@router.message(Command("terms"))
+async def cmd_terms(message: Message):
+    await process_terms(message)
+
+@router.callback_query(F.data == "btn_terms")
+async def cb_terms(callback: CallbackQuery):
+    await process_terms(callback.message)
+    await callback.answer()
+
+# ————— /contactadmin & Button —————
+
+@router.message(Command("contactadmin"))
+async def cmd_contact(message: Message, bot: Bot):
+    await process_contact_admin(message, bot)
+
+@router.callback_query(F.data == "btn_contact_admin")
+async def cb_contact_admin(callback: CallbackQuery, bot: Bot):
+    await process_contact_admin(callback.message, bot)
+    await callback.answer()
