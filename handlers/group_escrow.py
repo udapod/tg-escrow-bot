@@ -36,6 +36,13 @@ def detect_currency(wallet: str):
         return "LTC"
     return None
 
+def display_currency(currency: str) -> str:
+    if currency == "USDT":
+        return "USDT (TRC20)"
+    if currency == "LTC":
+        return "LTC (Litecoin)"
+    return currency
+
 def parse_role_args(message: Message):
     parts = message.text.split()
 
@@ -45,7 +52,7 @@ def parse_role_args(message: Message):
         if currency is None:
             return ("ERR", f"⛔ Unsupported currency <b>{parts[1]}</b>.\nUse <b>USDT</b> or <b>LTC</b>.")
         if not validate_wallet(currency, wallet):
-            return ("ERR", f"⛔ That is <b>NOT a valid {currency} address</b>.\nDouble-check the address and try again.")
+            return ("ERR", f"⛔ That is <b>NOT a valid {display_currency(currency)} address</b>.\nDouble-check the address and try again.")
         return (currency, wallet)
 
     if len(parts) == 2:
@@ -74,8 +81,8 @@ async def dm_block(message: Message):
 def mismatch_error(locked: str, other_role: str) -> str:
     return (
         f"⛔ <b>CURRENCY MISMATCH.</b>\n"
-        f"The {other_role} locked this deal to <b>{locked}</b>.\n"
-        f"You must also use <b>{locked}</b>."
+        f"The {other_role} locked this deal to <b>{display_currency(locked)}</b>.\n"
+        f"You must also use <b>{display_currency(locked)}</b>."
     )
 
 # ————— /seller —————
@@ -101,9 +108,9 @@ async def cmd_seller(message: Message, bot: Bot):
 
         if deal['seller_id'] == user_id:
             if deal['buyer_id'] is not None and locked and currency != locked:
-                return await message.answer(f"⛔ This deal is locked to <b>{locked}</b> by the buyer. You cannot change the network.", parse_mode="HTML")
+                return await message.answer(f"⛔ This deal is locked to <b>{display_currency(locked)}</b> by the buyer. You cannot change the network.", parse_mode="HTML")
             await db.execute("UPDATE group_deals SET seller_wallet = $1, currency = $2 WHERE chat_id = $3", wallet, currency, chat_id)
-            await message.answer(f"✅ <b>Seller wallet updated.</b>\n💳 Network: {currency}\n🏦 <code>{wallet}</code>", parse_mode="HTML")
+            await message.answer(f"✅ <b>Seller wallet updated.</b>\n💳 Network: {display_currency(currency)}\n🏦 <code>{wallet}</code>", parse_mode="HTML")
             await check_deal_ready(message, bot)
             return
 
@@ -120,7 +127,7 @@ async def cmd_seller(message: Message, bot: Bot):
     await message.answer(
         f"✅ <b>Seller registered & role locked.</b>\n"
         f"👤 {message.from_user.mention_html()}\n"
-        f"💳 Network: {currency}\n"
+        f"💳 Network: {display_currency(currency)}\n"
         f"🏦 Wallet: <code>{wallet}</code>",
         parse_mode="HTML",
     )
@@ -149,9 +156,9 @@ async def cmd_buyer(message: Message, bot: Bot):
 
         if deal['buyer_id'] == user_id:
             if deal['seller_id'] is not None and locked and currency != locked:
-                return await message.answer(f"⛔ This deal is locked to <b>{locked}</b> by the seller. You cannot change the network.", parse_mode="HTML")
+                return await message.answer(f"⛔ This deal is locked to <b>{display_currency(locked)}</b> by the seller. You cannot change the network.", parse_mode="HTML")
             await db.execute("UPDATE group_deals SET buyer_wallet = $1, currency = $2 WHERE chat_id = $3", wallet, currency, chat_id)
-            await message.answer(f"✅ <b>Buyer wallet updated.</b>\n💳 Network: {currency}\n🏦 <code>{wallet}</code>", parse_mode="HTML")
+            await message.answer(f"✅ <b>Buyer wallet updated.</b>\n💳 Network: {display_currency(currency)}\n🏦 <code>{wallet}</code>", parse_mode="HTML")
             await check_deal_ready(message, bot)
             return
 
@@ -168,7 +175,7 @@ async def cmd_buyer(message: Message, bot: Bot):
     await message.answer(
         f"✅ <b>Buyer registered & role locked.</b>\n"
         f"👤 {message.from_user.mention_html()}\n"
-        f"💳 Network: {currency}\n"
+        f"💳 Network: {display_currency(currency)}\n"
         f"🏦 Wallet: <code>{wallet}</code>",
         parse_mode="HTML",
     )
@@ -192,7 +199,7 @@ async def check_deal_ready(message: Message, bot: Bot):
             f"👤 Buyer: <a href='tg://user?id={deal['buyer_id']}'>Buyer</a>\n\n"
             f"💰 <b>Send funds to Escrow Address:</b>\n"
             f"<code>{escrow_addr}</code>\n\n"
-            f"⚠️ Network: <b>{currency}</b>\n\n"
+            f"⚠️ Network: <b>{display_currency(currency)}</b>\n\n"
             f"Once funds are sent and product received:\n"
             f"• Buyer types <code>/payseller</code> to release funds.\n"
             f"• Seller types <code>/refundbuyer</code> to cancel."
@@ -225,7 +232,7 @@ async def cmd_pay_seller(message: Message, bot: Bot):
                 f"💸 <b>PAYOUT REQUIRED</b>\n\n"
                 f"Group: <a href='{link}'>{message.chat.title}</a>\n"
                 f"Seller Wallet: <code>{deal['seller_wallet']}</code>\n"
-                f"Currency: {deal['currency']}",
+                f"Currency: {display_currency(deal['currency'])}",
                 parse_mode="HTML",
             )
         except Exception as e:
@@ -257,7 +264,7 @@ async def cmd_refund(message: Message, bot: Bot):
                 f"↩️ <b>REFUND REQUIRED</b>\n\n"
                 f"Group: <a href='{link}'>{message.chat.title}</a>\n"
                 f"Buyer Wallet: <code>{deal['buyer_wallet']}</code>\n"
-                f"Currency: {deal['currency']}",
+                f"Currency: {display_currency(deal['currency'])}",
                 parse_mode="HTML",
             )
         except Exception as e:

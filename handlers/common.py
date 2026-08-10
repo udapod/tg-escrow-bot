@@ -8,6 +8,13 @@ import database as db
 from languages import t
 from config import ADMIN_GROUP_ID, BOT_WALLET, BOT_WALLET_LTC
 
+def display_currency(currency: str) -> str:
+    if currency == "USDT":
+        return "USDT (TRC20)"
+    if currency == "LTC":
+        return "LTC (Litecoin)"
+    return currency
+
 router = Router()
 
 def is_group(message: Message) -> bool:
@@ -59,7 +66,7 @@ async def cmd_qr(message: Message, bot: Bot):
         BufferedInputFile(buf.read(), filename="escrow_qr.png"),
         caption=(
             f"💰 <b>Escrow Address QR</b>\n"
-            f"⚠️ Network: <b>{currency}</b>\n"
+            f"⚠️ Network: <b>{display_currency(currency)}</b>\n"
             f"<code>{escrow_addr}</code>"
         ),
         parse_mode="HTML",
