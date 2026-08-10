@@ -4,7 +4,7 @@ from aiogram import Router, Bot, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
 import database as db
-from config import BOT_WALLET, BOT_WALLET_LTC, ADMIN_GROUP_ID, ADMIN_ID
+from config import BOT_WALLET, BOT_WALLET_LTC, ADMIN_GROUP_ID, ADMIN_ID, REVIEW_CHANNEL_ID
 
 router = Router()
 
@@ -81,7 +81,6 @@ async def dm_block(message: Message):
     )
 
 async def check_bot_is_admin(bot: Bot, chat_id: int) -> bool:
-    """Checks if the bot has admin or creator status in the group."""
     try:
         member = await bot.get_chat_member(chat_id, bot.id)
         return member.status in ('administrator', 'creator')
@@ -96,12 +95,43 @@ async def not_admin_block(message: Message):
         parse_mode="HTML",
     )
 
+async def is_admin(user_id: int) -> bool:
+    if user_id == ADMIN_ID: return True
+    row = await db.fetchval("SELECT 1 FROM bot_admins WHERE user_id = $1", user_id)
+    return row is not None
+
 def mismatch_error(locked: str, other_role: str) -> str:
     return (
         f"⛔ <b>CURRENCY MISMATCH.</b>\n"
         f"The {other_role} locked this deal to <b>{display_currency(locked)}</b>.\n"
         f"You must also use <b>{display_currency(locked)}</b>."
     )
+
+async def prompt_for_review(bot: Bot, deal: dict):
+    if not REVIEW_CHANNEL_ID: return
+    chat_id = deal['chat_id']
+    buyer_id = deal['buyer_id']
+    seller_id = deal['seller_id']
+    
+    buyer_mention = f"<a href='tg://user?id={buyer_id}'>Buyer</a>" if buyer_id else "Buyer"
+    seller_mention = f"<a href='tg://user?id={seller_id}'>Seller</a>" if seller_id else "Seller"
+    
+    text = (
+        "🌟 <b>Deal Concluded!</b>\n\n"
+        f"👤 {buyer_mention} and 👤 {seller_mention}\n\n"
+        "How was your experience with <b>YEETOP ESCROW BOT</b>?\n"
+        "Please <b>reply to this message</b> with your review or feedback!"
+    )
+    
+    try:
+        msg = await bot.send_message(chat_id, text, parse_mode="HTML")
+        await db.execute(
+            "INSERT INTO review_prompts (chat_id, message_id, buyer_id, seller_id) VALUES ($1, $2, $3, $4) "
+            "ON CONFLICT (chat_id) DO UPDATE SET message_id = EXCLUDED.message_id, buyer_id = EXCLUDED.buyer_id, seller_id = EXCLUDED.seller_id",
+            chat_id, msg.message_id, buyer_id, seller_id
+        )
+    except Exception as e:
+        print(f"Failed to prompt for review: {e}")
 
 # ————— /seller —————
 
@@ -241,11 +271,10 @@ async def cmd_pay_seller(message: Message, bot: Bot):
     deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1 AND status = 'active'", chat_id)
 
     if not deal:
-        return await message.answer("⛔ No active deal found in this group.")
+        return await message.answer("⛔ No active deal found here, press /start to start a new deal.", parse_mode="HTML")
     if deal['buyer_id'] != message.from_user.id:
         return await message.answer("⛔ Only the registered buyer can release funds.")
 
-    # Build the confirmation card
     confirm_text = (
         "⚠️ <b>CONFIRM PAYMENT RELEASE</b>\n\n"
         "You are about to release the escrow funds to the seller.\n\n"
@@ -278,11 +307,10 @@ async def cmd_refund(message: Message, bot: Bot):
     deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1 AND status = 'active'", chat_id)
 
     if not deal:
-        return await message.answer("⛔ No active deal found in this group.")
+        return await message.answer("⛔ No active deal found here, press /start to start a new deal.", parse_mode="HTML")
     if deal['seller_id'] != message.from_user.id:
         return await message.answer("⛔ Only the registered seller can initiate a refund.")
 
-    # Build the confirmation card
     confirm_text = (
         "⚠️ <b>CONFIRM REFUND</b>\n\n"
         "You are about to refund the escrow funds back to the buyer.\n\n"
@@ -302,6 +330,62 @@ async def cmd_refund(message: Message, bot: Bot):
 
     await message.answer(confirm_text, parse_mode="HTML", reply_markup=kb)
 
+# ————— ADMIN: IN-GROUP FORCE COMMANDS —————
+
+@router.message(Command("forcepay"))
+async def cmd_forcepay(message: Message, bot: Bot):
+    if not is_group(message): return await dm_block(message)
+    if not await is_admin(message.from_user.id):
+        return await message.answer("⛔ Admin access required.", parse_mode="HTML")
+        
+    chat_id = message.chat.id
+    deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1 AND status = 'active'", chat_id)
+    if not deal:
+        return await message.answer("⛔ No active deal found here, press /start to start a new deal.", parse_mode="HTML")
+        
+    confirm_text = (
+        "⚠️ <b>ADMIN: FORCE PAYMENT RELEASE</b>\n\n"
+        "You are about to override the buyer and force-release funds to the seller.\n\n"
+        f"💳 Network: <b>{display_currency(deal['currency'])}</b>\n"
+        f"🏦 Seller Wallet: <code>{deal['seller_wallet']}</code>\n\n"
+        "🚨 <b>THIS ACTION CAN'T BE UNDONE.</b>\n"
+        "Once released, funds cannot be reversed or recalled by YEETOP ESCROW BOT."
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Confirm & Force Release", callback_data=f"admin_confirm_pay_{chat_id}"),
+            InlineKeyboardButton(text="❌ Cancel", callback_data=f"admin_cancel_{chat_id}"),
+        ]
+    ])
+    await message.answer(confirm_text, parse_mode="HTML", reply_markup=kb)
+
+@router.message(Command("forcerefund"))
+async def cmd_forcerefund(message: Message, bot: Bot):
+    if not is_group(message): return await dm_block(message)
+    if not await is_admin(message.from_user.id):
+        return await message.answer("⛔ Admin access required.", parse_mode="HTML")
+        
+    chat_id = message.chat.id
+    deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1 AND status = 'active'", chat_id)
+    if not deal:
+        return await message.answer("⛔ No active deal found here, press /start to start a new deal.", parse_mode="HTML")
+        
+    confirm_text = (
+        "⚠️ <b>ADMIN: FORCE REFUND</b>\n\n"
+        "You are about to override the seller and force-refund funds to the buyer.\n\n"
+        f"💳 Network: <b>{display_currency(deal['currency'])}</b>\n"
+        f"🏦 Buyer Wallet: <code>{deal['buyer_wallet']}</code>\n\n"
+        "🚨 <b>THIS ACTION CAN'T BE UNDONE.</b>\n"
+        "Once refunded, funds cannot be reversed or recalled by YEETOP ESCROW BOT."
+    )
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Confirm & Force Refund", callback_data=f"admin_confirm_refund_{chat_id}"),
+            InlineKeyboardButton(text="❌ Cancel", callback_data=f"admin_cancel_{chat_id}"),
+        ]
+    ])
+    await message.answer(confirm_text, parse_mode="HTML", reply_markup=kb)
+
 # ————— CALLBACK: CONFIRM PAYMENT RELEASE —————
 
 @router.callback_query(F.data.startswith("confirm_pay_"))
@@ -314,12 +398,10 @@ async def cb_confirm_pay(callback: CallbackQuery, bot: Bot):
         await callback.answer()
         return
 
-    # Security: only the original buyer can confirm
     if deal['buyer_id'] != callback.from_user.id:
         await callback.answer("⛔ Only the buyer can confirm this payment.", show_alert=True)
         return
 
-    # Execute the release
     await db.execute("UPDATE group_deals SET status = 'completed' WHERE chat_id = $1", chat_id)
 
     await callback.message.edit_text(
@@ -329,6 +411,8 @@ async def cb_confirm_pay(callback: CallbackQuery, bot: Bot):
         parse_mode="HTML",
     )
     await callback.answer("Payment released.")
+    
+    await prompt_for_review(bot, deal)
 
     if ADMIN_GROUP_ID:
         try:
@@ -356,12 +440,10 @@ async def cb_confirm_refund(callback: CallbackQuery, bot: Bot):
         await callback.answer()
         return
 
-    # Security: only the original seller can confirm
     if deal['seller_id'] != callback.from_user.id:
         await callback.answer("⛔ Only the seller can confirm this refund.", show_alert=True)
         return
 
-    # Execute the refund
     await db.execute("UPDATE group_deals SET status = 'refunded' WHERE chat_id = $1", chat_id)
 
     await callback.message.edit_text(
@@ -371,6 +453,8 @@ async def cb_confirm_refund(callback: CallbackQuery, bot: Bot):
         parse_mode="HTML",
     )
     await callback.answer("Refund issued.")
+    
+    await prompt_for_review(bot, deal)
 
     if ADMIN_GROUP_ID:
         try:
@@ -393,7 +477,6 @@ async def cb_cancel_confirm(callback: CallbackQuery):
     chat_id = int(callback.data.split("_")[-1])
     deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1", chat_id)
 
-    # Security: only the buyer (for pay) or seller (for refund) can cancel their own prompt
     if not deal or (callback.from_user.id not in (deal['buyer_id'], deal['seller_id'])):
         await callback.answer("⛔ You cannot cancel this.", show_alert=True)
         return
@@ -409,7 +492,7 @@ async def cb_cancel_confirm(callback: CallbackQuery):
 
 @router.message(Command("active"))
 async def cmd_active(message: Message, bot: Bot):
-    if message.from_user.id != ADMIN_ID:
+    if not await is_admin(message.from_user.id):
         return await message.answer("⛔ Admin access required.", parse_mode="HTML")
 
     deals = await db.fetch("SELECT * FROM group_deals WHERE status = 'active'")
@@ -445,7 +528,7 @@ async def cmd_active(message: Message, bot: Bot):
 
 @router.callback_query(F.data.startswith("admin_force_pay_"))
 async def cb_admin_force_pay(callback: CallbackQuery, bot: Bot):
-    if callback.from_user.id != ADMIN_ID:
+    if not await is_admin(callback.from_user.id):
         await callback.answer("⛔ Admin access required.", show_alert=True)
         return
 
@@ -480,7 +563,7 @@ async def cb_admin_force_pay(callback: CallbackQuery, bot: Bot):
 
 @router.callback_query(F.data.startswith("admin_force_refund_"))
 async def cb_admin_force_refund(callback: CallbackQuery, bot: Bot):
-    if callback.from_user.id != ADMIN_ID:
+    if not await is_admin(callback.from_user.id):
         await callback.answer("⛔ Admin access required.", show_alert=True)
         return
 
@@ -515,7 +598,7 @@ async def cb_admin_force_refund(callback: CallbackQuery, bot: Bot):
 
 @router.callback_query(F.data.startswith("admin_confirm_pay_"))
 async def cb_admin_confirm_pay(callback: CallbackQuery, bot: Bot):
-    if callback.from_user.id != ADMIN_ID:
+    if not await is_admin(callback.from_user.id):
         await callback.answer("⛔ Admin access required.", show_alert=True)
         return
 
@@ -536,23 +619,26 @@ async def cb_admin_confirm_pay(callback: CallbackQuery, bot: Bot):
         parse_mode="HTML",
     )
     await callback.answer("Force release executed.")
+    
+    await prompt_for_review(bot, deal)
 
-    # Notify the deal group
-    try:
-        await bot.send_message(
-            chat_id,
-            "⚠️ <b>ADMIN INTERVENTION</b>\n\n"
-            "An administrator has force-released the escrow funds to the seller.",
-            parse_mode="HTML",
-        )
-    except Exception:
-        pass
+    # Notify the deal group ONLY IF the callback didn't happen in the deal group
+    if callback.message.chat.id != chat_id:
+        try:
+            await bot.send_message(
+                chat_id,
+                "⚠️ <b>ADMIN INTERVENTION</b>\n\n"
+                "An administrator has force-released the escrow funds to the seller.",
+                parse_mode="HTML",
+            )
+        except Exception:
+            pass
 
 # ————— ADMIN: CONFIRM FORCE REFUND —————
 
 @router.callback_query(F.data.startswith("admin_confirm_refund_"))
 async def cb_admin_confirm_refund(callback: CallbackQuery, bot: Bot):
-    if callback.from_user.id != ADMIN_ID:
+    if not await is_admin(callback.from_user.id):
         await callback.answer("⛔ Admin access required.", show_alert=True)
         return
 
@@ -573,25 +659,57 @@ async def cb_admin_confirm_refund(callback: CallbackQuery, bot: Bot):
         parse_mode="HTML",
     )
     await callback.answer("Force refund executed.")
+    
+    await prompt_for_review(bot, deal)
 
-    # Notify the deal group
-    try:
-        await bot.send_message(
-            chat_id,
-            "⚠️ <b>ADMIN INTERVENTION</b>\n\n"
-            "An administrator has force-refunded the escrow funds to the buyer.",
-            parse_mode="HTML",
-        )
-    except Exception:
-        pass
+    # Notify the deal group ONLY IF the callback didn't happen in the deal group
+    if callback.message.chat.id != chat_id:
+        try:
+            await bot.send_message(
+                chat_id,
+                "⚠️ <b>ADMIN INTERVENTION</b>\n\n"
+                "An administrator has force-refunded the escrow funds to the buyer.",
+                parse_mode="HTML",
+            )
+        except Exception:
+            pass
 
 # ————— ADMIN: CANCEL —————
 
 @router.callback_query(F.data.startswith("admin_cancel_"))
 async def cb_admin_cancel(callback: CallbackQuery):
-    if callback.from_user.id != ADMIN_ID:
+    if not await is_admin(callback.from_user.id):
         await callback.answer("⛔ Admin access required.", show_alert=True)
         return
 
     await callback.message.edit_text("❌ <b>Action cancelled.</b>", parse_mode="HTML")
     await callback.answer("Cancelled.")
+
+# ————— GROUP REVIEW LISTENER —————
+
+@router.message(F.chat.type.in_(["group", "supergroup"]), F.text)
+async def handle_group_review(message: Message, bot: Bot):
+    if not message.reply_to_message:
+        return
+        
+    prompt = await db.fetchrow("SELECT message_id, buyer_id, seller_id FROM review_prompts WHERE chat_id = $1", message.chat.id)
+    if not prompt:
+        return
+        
+    if message.reply_to_message.message_id == prompt['message_id']:
+        if message.from_user.id in (prompt['buyer_id'], prompt['seller_id']):
+            await db.execute("DELETE FROM review_prompts WHERE chat_id = $1", message.chat.id)
+            
+            review_text = (
+                f"⭐ <b>NEW BOT REVIEW</b>\n\n"
+                f"👤 User: {message.from_user.mention_html()} (<code>{message.from_user.id}</code>)\n"
+                f"💼 From Group: <b>{message.chat.title}</b> (<code>{message.chat.id}</code>)\n\n"
+                f"💬 <i>{message.text}</i>"
+            )
+            if REVIEW_CHANNEL_ID:
+                try:
+                    await bot.send_message(REVIEW_CHANNEL_ID, review_text, parse_mode="HTML")
+                except Exception as e:
+                    print(f"Failed to send review to channel: {e}")
+                    
+            await message.reply("✅ Thank you! Your review has been submitted.", parse_mode="HTML")

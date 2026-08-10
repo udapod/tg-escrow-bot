@@ -113,6 +113,19 @@ CREATE TABLE IF NOT EXISTS group_deals (
     status TEXT DEFAULT 'setup',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS bot_admins (
+    user_id BIGINT PRIMARY KEY,
+    added_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS review_prompts (
+    chat_id BIGINT PRIMARY KEY,
+    message_id BIGINT NOT NULL,
+    buyer_id BIGINT,
+    seller_id BIGINT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 """
 
 def _database_url():

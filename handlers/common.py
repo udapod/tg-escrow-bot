@@ -1,12 +1,12 @@
 import qrcode
 from io import BytesIO
 
-from aiogram import Router, Bot
+from aiogram import Router, Bot, F
 from aiogram.types import Message, BufferedInputFile
 from aiogram.filters import Command, CommandStart
 import database as db
 from languages import t
-from config import ADMIN_GROUP_ID, BOT_WALLET, BOT_WALLET_LTC
+from config import ADMIN_GROUP_ID, BOT_WALLET, BOT_WALLET_LTC, ADMIN_ID
 
 def display_currency(currency: str) -> str:
     if currency == "USDT":
@@ -28,28 +28,43 @@ async def dm_block(message: Message):
     )
 
 @router.message(CommandStart())
-async def cmd_start(message: Message):
+async def cmd_start(message: Message, bot: Bot):
+    if is_group(message):
+        deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1", message.chat.id)
+        if deal and deal['status'] in ('setup', 'active'):
+            return await message.answer(
+                "⚠️ <b>A deal is already in progress in this group.</b>\n\n"
+                "Please finish or cancel the current deal before starting a new one.",
+                parse_mode="HTML",
+            )
     await message.answer(t(message.from_user.language_code or "en", "welcome"), parse_mode="HTML")
 
 @router.message(Command("chatid"))
 async def cmd_chatid(message: Message):
     await message.answer(f" Chat ID: <code>{message.chat.id}</code>", parse_mode="HTML")
 
+@router.message(Command("addadmin"))
+async def cmd_addadmin(message: Message):
+    if message.from_user.id != ADMIN_ID:
+        return await message.answer("⛔ Root admin access required.", parse_mode="HTML")
+    
+    parts = message.text.split()
+    if len(parts) < 2 or not parts[1].isdigit():
+        return await message.answer("Usage: <code>/addadmin USER_ID</code>", parse_mode="HTML")
+    
+    uid = int(parts[1])
+    await db.execute("INSERT INTO bot_admins (user_id) VALUES ($1) ON CONFLICT DO NOTHING", uid)
+    await message.answer(f"✅ Admin <code>{uid}</code> added successfully.", parse_mode="HTML")
+
 @router.message(Command("qr"))
 async def cmd_qr(message: Message, bot: Bot):
     if not is_group(message):
         return await dm_block(message)
 
-    deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1", message.chat.id)
+    deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1 AND status = 'active'", message.chat.id)
 
-    if not deal or not deal['seller_id'] or not deal['buyer_id']:
-        return await message.answer(
-            "⛔ <b>No escrow address generated yet.</b>\n\n"
-            "Both the seller and the buyer must register first:\n"
-            "<code>/seller CURRENCY WALLET</code>\n"
-            "<code>/buyer CURRENCY WALLET</code>",
-            parse_mode="HTML",
-        )
+    if not deal:
+        return await message.answer("⛔ No active deal found here, press /start to start a new deal.", parse_mode="HTML")
 
     currency = deal['currency']
     escrow_addr = BOT_WALLET_LTC if currency == 'LTC' else BOT_WALLET
