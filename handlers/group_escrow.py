@@ -68,6 +68,8 @@ def parse_role_args(message: Message):
         "Or simply: <code>/seller YOUR_WALLET_ADDRESS</code> (auto-detect)"
     ))
 
+# ————— SECURITY & GROUP CHECKS —————
+
 def is_group(message: Message) -> bool:
     return message.chat.type in ["group", "supergroup"]
 
@@ -75,6 +77,22 @@ async def dm_block(message: Message):
     await message.answer(
         "⛔ <b>You can only use this command inside a group chat.</b>\n\n"
         "Kindly make a group chat and add the bot.",
+        parse_mode="HTML",
+    )
+
+async def check_bot_is_admin(bot: Bot, chat_id: int) -> bool:
+    """Checks if the bot has admin or creator status in the group."""
+    try:
+        member = await bot.get_chat_member(chat_id, bot.id)
+        return member.status in ('administrator', 'creator')
+    except Exception:
+        return False
+
+async def not_admin_block(message: Message):
+    await message.answer(
+        "⛔ <b>Bot is not an admin.</b>\n\n"
+        "For security and dispute resolution, this bot must be promoted to an Admin in this group before a deal can begin.\n\n"
+        "<i>Please ask the group owner to grant admin rights to the bot.</i>",
         parse_mode="HTML",
     )
 
@@ -91,6 +109,8 @@ def mismatch_error(locked: str, other_role: str) -> str:
 async def cmd_seller(message: Message, bot: Bot):
     if not is_group(message):
         return await dm_block(message)
+    if not await check_bot_is_admin(bot, message.chat.id):
+        return await not_admin_block(message)
 
     currency, wallet = parse_role_args(message)
     if currency == "ERR":
@@ -139,6 +159,8 @@ async def cmd_seller(message: Message, bot: Bot):
 async def cmd_buyer(message: Message, bot: Bot):
     if not is_group(message):
         return await dm_block(message)
+    if not await check_bot_is_admin(bot, message.chat.id):
+        return await not_admin_block(message)
 
     currency, wallet = parse_role_args(message)
     if currency == "ERR":
@@ -212,6 +234,8 @@ async def check_deal_ready(message: Message, bot: Bot):
 async def cmd_pay_seller(message: Message, bot: Bot):
     if not is_group(message):
         return await dm_block(message)
+    if not await check_bot_is_admin(bot, message.chat.id):
+        return await not_admin_block(message)
 
     chat_id = message.chat.id
     deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1 AND status = 'active'", chat_id)
@@ -247,6 +271,8 @@ async def cmd_pay_seller(message: Message, bot: Bot):
 async def cmd_refund(message: Message, bot: Bot):
     if not is_group(message):
         return await dm_block(message)
+    if not await check_bot_is_admin(bot, message.chat.id):
+        return await not_admin_block(message)
 
     chat_id = message.chat.id
     deal = await db.fetchrow("SELECT * FROM group_deals WHERE chat_id = $1 AND status = 'active'", chat_id)
