@@ -1,13 +1,11 @@
-# 🤝 HandshakeDeal Bot
 
-**Telegram P2P escrow bot for safe USDT TRC-20 trades.**
 
-A fully automated Telegram bot that acts as an escrow guarantor for peer-to-peer deals. Buyers and sellers trade goods & services while USDT funds are frozen in the bot's wallet until delivery is confirmed. No trust needed — the blockchain verifies everything.
+```markdown
+# 🕊 YEETOP ESCROW BOT
 
-[![Open Source](https://img.shields.io/badge/Open%20Source-yes-brightgreen)](#license)
-[![Python](https://img.shields.io/badge/Python-3.10+-blue)](https://python.org)
-[![Telegram Bot](https://img.shields.io/badge/Telegram-Bot-0088cc)](https://core.telegram.org/bots)
-[![USDT TRC-20](https://img.shields.io/badge/USDT-TRC--20-26A17B)](https://tron.network)
+**Telegram group-chat escrow bot for safe USDT (TRC-20) and Litecoin trades.**
+
+A fully automated Telegram bot that acts as an escrow guarantor for peer-to-peer deals inside group chats. Buyers and sellers trade goods & services while crypto funds are frozen in the bot's wallet until the deal is confirmed. No trust needed — the blockchain verifies everything.
 
 ---
 
@@ -16,76 +14,73 @@ A fully automated Telegram bot that acts as an escrow guarantor for peer-to-peer
 ```
 Buyer                         Bot (Escrow)                  Seller
   │                              │                              │
-  │── Start deal ───────────────>│                              │
-  │                              │── Notification ─────────────>│
-  │── USDT → bot wallet ────────>│                              │
-  │── Submit TxID ──────────────>│ 🔐 Funds frozen              │
-  │                              │── Funds in escrow! ─────────>│
+  │── /buyer LTC wallet ────────>│                              │
+  │                              │<── /seller LTC wallet ───────│
+  │                              │── 🤝 DEAL ACTIVE ───────────>│
+  │                              │── Escrow address ───────────>│
   │                              │                              │
-  │                              │<── Order fulfilled ──────────│
-  │<── Delivered! ───────────────│                              │
+  │── Crypto → escrow ──────────>│ 🔐 Funds frozen              │
   │                              │                              │
-  │── ✅ Confirm receipt ───────>│                              │
+  │                              │<── Product delivered ────────│
+  │<── Received! ────────────────│                              │
+  │                              │                              │
+  │── /payseller ───────────────>│                              │
+  │   [✅ Confirm & Release]     │                              │
   │                              │── 💵 Payout to seller ──────>│
   │                              │                              │
-  │── ⭐ Review ────────────────>│<── ⭐ Review ────────────────│
+  │── ⭐ Reply to review ───────>│<── ⭐ Reply to review ───────│
 ```
 
-1. Seller creates a listing (goods or services)
-2. Buyer starts a deal → sends USDT to the bot's escrow wallet
-3. Bot verifies the transaction on TRON blockchain (TxHash)
-4. Contacts are unlocked → anonymous deal chat becomes open
-5. Buyer confirms receipt → funds released to seller
-6. Both parties leave reviews
+1. Seller and buyer add the bot to a group chat and promote it to admin
+2. Both register their roles and wallet addresses via `/seller` and `/buyer` commands
+3. Bot locks the deal to the matching currency and displays the escrow address
+4. Buyer sends funds to the escrow address, seller delivers the product/service
+5. Buyer types `/payseller` to release funds (with confirmation gate)
+6. Bot prompts both parties for reviews, which are forwarded to the review channel
 
-**First deal is commission-free!**
+**5% escrow fee, minimum $5**
 
 ---
 
 ## ✨ Features
 
 ### Core
-- **Escrow Protection** — USDT frozen on bot wallet until buyer confirms receipt
-- **Blockchain Verification** — TxHash checked via TronGrid API (amount, recipient, token)
-- **Auto-Completion** — deal auto-completes 72h after delivery if no dispute
-- **Dispute System** — funds stay frozen until admin resolves the conflict
+- **Group-Chat Escrow** — deals happen inside private group chats, not public catalogs
+- **Multi-Currency** — USDT (TRC-20) and Litecoin (LTC) with auto-detection
+- **Address Validation** — regex validation prevents invalid wallet submissions
+- **Currency Locking** — once first party registers, the other must match the network
+- **Role Locking** — users cannot switch between buyer and seller mid-deal
+- **Confirmation Gates** — irreversible actions require explicit confirmation with warning
 
-### Trading
-- **Listings Catalog** — goods & services with categories, search, pagination
-- **Location-Based** — 6 countries, 50+ cities, localized country names
-- **Deal Chat** — anonymous messaging before payment, contacts unlocked after
-- **Meeting Proposals** — suggest time & place for in-person deals
+### Trust & Security
+- **Bot-As-Admin Required** — bot refuses to operate unless promoted to admin in the group
+- **Dispute Intervention** — admins can force-release or force-refund when parties disagree
+- **Ban System** — admins can ban users from using the bot globally
+- **Terms of Service** — built-in TOS with liability disclaimers and evidence requirements
+- **Scam Education** — `/avoidscam` command with educational GIF
 
-### Trust & Reputation
-- **Star Ratings** — 1–5 stars after each deal with text & photo reviews
-- **Reputation Levels** — Bronze → Silver → Gold with commission discounts
-- **VIP Subscriptions** — verified seller badge, priority in catalog, lower fees
-- **Seller Favorites** — follow sellers, get notified about new listings
+### Admin Override
+- **Dynamic Admins** — root admin can add other admins via `/addadmin`
+- **Force Commands** — `/forcepay` and `/forcerefund` work directly in the deal group
+- **Active Deal Monitor** — `/active` shows all ongoing deals with quick-action buttons
+- **Review Channel** — user reviews automatically forwarded to designated channel
 
-### Growth
-- **Referral Program** — invite link + tracking, first deal free for referrals
-- **QR Codes** — shareable QR for bot link and escrow payment wallets
-- **7 Languages** — English, Russian, Turkish, Uzbek, Kazakh, Kyrgyz, Tajik
-
-### Admin
-- **Admin Panel** — `/admin` with statistics, user management, dispute resolution
-- **Ban/Unban** — block fraudulent users
-- **Dispute Resolution** — pay seller or refund buyer with confirmation
-- **Escrow Monitoring** — track all active deals and frozen funds
+### User Experience
+- **Inline Buttons** — clickable confirmation cards instead of text-only prompts
+- **QR Codes** — `/qr` generates QR for the active deal's escrow address
+- **Group Review System** — bot posts review prompt in group, users reply to submit feedback
+- **Clear Error Messages** — descriptive errors for invalid addresses, currency mismatches, role conflicts
 
 ---
 
-## 💰 Commission Structure
+## 💰 Fee Structure
 
-| Deal Amount | Standard | VIP (50% off) |
-|-------------|----------|----------------|
-| First deal  | **0% (free!)** | **0% (free!)** |
-| 20–100 USDT | 3% (min 2 USDT) | 1.5% |
-| 100–500 USDT | 2% | 1% |
-| 500+ USDT | 1.5% | 0.75% |
-| Cancellation after payment | 2% penalty | 2% penalty |
+| Condition | Fee |
+|-----------|-----|
+| All deals | **5%** of transaction amount |
+| Minimum fee | **$5** (for deals under $100) |
 
-**VIP subscription:** 10 USDT / 30 days
+No VIP tiers, no referral discounts, no progressive scales. Simple and transparent.
 
 ---
 
@@ -93,8 +88,8 @@ Buyer                         Bot (Escrow)                  Seller
 
 ### 1. Clone & Install
 ```bash
-git clone https://github.com/GrossBuilder/HandshakeDealBot.git
-cd HandshakeDealBot
+git clone https://github.com/udapod/tg-escrow-bot.git
+cd tg-escrow-bot
 pip install -r requirements.txt
 ```
 
@@ -102,16 +97,19 @@ pip install -r requirements.txt
 Copy `.env.example` → `.env` and fill in:
 
 ```env
-BOT_TOKEN=123456:ABC-DEF...       # Token from @BotFather
-ADMIN_ID=123456789                 # Your Telegram user ID
-BOT_WALLET=T...                    # TRC-20 wallet for escrow
-TRONGRID_API_KEY=...               # TronGrid API key
-AUTO_COMPLETE_HOURS=72             # Auto-completion timer
+BOT_TOKEN=123456:ABC-DEF...           # Token from @BotFather
+ADMIN_ID=123456789                     # Your Telegram user ID
+ADMIN_GROUP_ID=-1001234567890          # Your admin group chat ID
+REVIEW_CHANNEL_ID=-1009876111110       # Your review channel ID
+BOT_WALLET=T...                        # TRC-20 wallet for USDT escrow
+BOT_WALLET_LTC=L...                    # Litecoin wallet for LTC escrow
+DATABASE_URL=postgresql://...          # Supabase connection string
+REDIS_URL=rediss://...                 # Upstash Redis connection string
 ```
 
-### 3. Run
+### 3. Deploy to Vercel
 ```bash
-python bot.py
+vercel --prod
 ```
 
 ### Docker (optional)
@@ -124,82 +122,87 @@ docker-compose up -d
 ## 📂 Project Structure
 
 ```
-HandshakeDealBot/
-├── bot.py                # Entry point, background tasks
-├── config.py             # Configuration, commission calc, statuses
-├── database.py           # SQLite: users, listings, deals, reviews
-├── keyboards.py          # Inline & Reply keyboards
-├── languages.py          # Translation system (222 keys × 7 langs)
-├── tron.py               # TronGrid API — blockchain verification
-├── qr_utils.py           # QR code generation
-├── contact_filter.py     # Contact info filtering for chat
-├── _lang_en.py           # English translations
-├── _lang_tr.py           # Turkish translations
-├── _lang_tg.py           # Tajik translations
-├── _lang_ky.py           # Kyrgyz translations
+tg-escrow-bot/
+├── api/
+│   └── index.py              # FastAPI webhook endpoint, bot initialization
+├── db/
+│   └── core.py               # PostgreSQL schema, connection pool, query helpers
 ├── handlers/
-│   ├── common.py         # /start, /help, profile, admin, wallet, lang
-│   ├── listings.py       # Create/browse/search/delete listings
-│   ├── deals.py          # Escrow deals, disputes, reviews, chat
-│   └── vip.py            # VIP subscriptions & payment
-├── docker-compose.yml    # Docker deployment
-├── Dockerfile
-├── requirements.txt
-└── README.md
+│   ├── common.py             # /start, /terms, /contactadmin, /ban, /unban, /addadmin, /avoidscam
+│   └── group_escrow.py       # /seller, /buyer, /payseller, /refundbuyer, /forcepay, /forcerefund
+├── config.py                 # Environment variables, wallet addresses, admin IDs
+├── database.py               # High-level database functions (get_user, create_deal, etc.)
+├── languages.py              # Single-language text strings (English)
+├── yee.gif                   # Educational "How to Avoid Scam" GIF
+├── requirements.txt          # Python dependencies
+├── vercel.json               # Vercel deployment configuration
+├── .env.example              # Environment variable template
+├── Dockerfile                # Docker container definition
+└── README.md                 # This file
 ```
 
 ---
 
 ## 🤖 Bot Commands
 
+### User Commands (Group Chat Only)
+
 | Command | Description |
 |---------|-------------|
-| `/start` | Register and open the main menu |
-| `/lang` | Change interface language |
-| `/location` | Set your city |
-| `/help` | Rules, commissions, how escrow works |
-| `/wallet T...` | Set your USDT wallet (TRC-20) |
-| `/qr` | Get QR code to share the bot |
-| `/support` | Contact admin support |
-| `/meet` | Propose a meeting (in deal chat) |
-| `/admin` | Admin panel (admin only) |
-| `/resolve ID seller/buyer` | Resolve dispute (admin only) |
-| `/ban ID` / `/unban ID` | Ban/unban user (admin only) |
+| `/start` | Display welcome message with Terms and Contact buttons |
+| `/seller USDT WALLET` | Register as seller with USDT TRC-20 wallet |
+| `/seller LTC WALLET` | Register as seller with Litecoin wallet |
+| `/buyer USDT WALLET` | Register as buyer with USDT TRC-20 wallet |
+| `/buyer LTC WALLET` | Register as buyer with Litecoin wallet |
+| `/payseller` | Release escrow funds to seller (buyer only, requires confirmation) |
+| `/refundbuyer` | Refund escrow funds to buyer (seller only, requires confirmation) |
+| `/qr` | Generate QR code for active deal's escrow address |
+| `/terms` | Display full Terms of Service |
+| `/contactadmin` | Send support request to admin group |
+| `/avoidscam` | Display educational scam-prevention GIF |
+
+### Admin Commands
+
+| Command | Description |
+|---------|-------------|
+| `/addadmin USER_ID` | Grant admin privileges to another user (root admin only) |
+| `/ban USER_ID` | Ban user from using the bot globally |
+| `/unban USER_ID` | Remove user ban |
+| `/active` | View all active deals with force-action buttons |
+| `/forcepay` | Force-release funds to seller (in deal group, admin only) |
+| `/forcerefund` | Force-refund funds to buyer (in deal group, admin only) |
+| `/chatid` | Display current chat/group ID |
 
 ---
 
-## 🌍 Supported Languages
+## 🛡 Security Features
 
-| Flag | Language | Code |
-|------|----------|------|
-| 🇺🇸 | English | `en` |
-| 🇷🇺 | Русский | `ru` |
-| 🇹🇷 | Türkçe | `tr` |
-| 🇺🇿 | O'zbek | `uz` |
-| 🇰🇿 | Қазақша | `kk` |
-| 🇰🇬 | Кыргызча | `ky` |
-| 🇹🇯 | Тоҷикӣ | `tg` |
-
-All 222 UI strings are fully translated for every language. No mixed-language interfaces.
+- **Bot-as-Admin Required** — refuses to operate unless promoted to admin in the group
+- **Currency Locking** — prevents mismatched currency deals
+- **Role Locking** — prevents users from switching buyer/seller roles
+- **Confirmation Gates** — irreversible actions require explicit confirmation with "THIS ACTION CAN'T BE UNDONE" warning
+- **Admin Override** — admins can force-resolve disputes when parties are uncooperative
+- **Global Ban System** — banned users cannot use any bot commands
+- **Address Validation** — regex prevents invalid wallet addresses from being registered
+- **No Side Deals** — Terms of Service explicitly state bot is not liable for off-platform agreements
 
 ---
 
-## 🛡 Fraud Protection
+## 📝 Review System
 
-- **Seller can't steal** — funds released only after buyer confirmation
-- **Buyer can't scam** — funds frozen in escrow, visible on blockchain
-- **72h auto-timer** — protects seller from unresponsive buyers
-- **TxHash verification** — bot checks amount, recipient, and token on-chain
-- **3 attempt limit** — deal blocked after 3 failed payment verifications
-- **Contact filtering** — phone numbers and links blocked before escrow payment
-- **Admin disputes** — manual resolution when parties disagree
- **Admin disputes** — manual resolution when parties disagree
+When a deal completes (via `/payseller`, `/refundbuyer`, or admin override):
+1. Bot posts a review prompt in the group chat
+2. Tags both buyer and seller
+3. Users reply directly to the bot's message with their feedback
+4. Bot forwards the review to the designated review channel
+
+No DMs, no spam, no ban risk.
 
 ---
 
 ## 📄 License
 
-[MIT License](LICENSE) — free to use, modify, and distribute.
+MIT License — free to use, modify, and distribute.
 
 ---
 
@@ -209,4 +212,6 @@ Pull requests are welcome! For major changes, please open an issue first.
 
 ---
 
-**Built with [aiogram](https://docs.aiogram.dev/) + [TronGrid API](https://www.trongrid.io/) + [aiosqlite](https://aiosqlite.omnilib.dev/)**
+**Built with aiogram + FastAPI + PostgreSQL + Vercel**
+```
+
