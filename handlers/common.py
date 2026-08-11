@@ -10,9 +10,9 @@ import database as db
 from languages import t
 from config import ADMIN_GROUP_ID, BOT_WALLET, BOT_WALLET_LTC, ADMIN_ID, REVIEW_CHANNEL_ID
 
-# Resolve path to yee.gif in the root directory
+# Resolve path to yee.mp4 in the root directory
 ROOT_DIR = Path(__file__).resolve().parent.parent
-GIF_PATH = ROOT_DIR / "yee.gif"
+GIF_PATH = ROOT_DIR / "yee.mp4"
 
 def display_currency(currency: str) -> str:
     if currency == "USDT":
@@ -49,7 +49,7 @@ async def send_avoid_scam_gif(message: Message):
             parse_mode="HTML"
         )
     else:
-        await message.answer("⚠️ The educational GIF (<code>yee.gif</code>) is missing from the server.", parse_mode="HTML")
+        await message.answer("⚠️ The educational GIF (<code>yee.mp4</code>) is missing from the server.", parse_mode="HTML")
 
 # --- Helper for Terms ---
 async def process_terms(message: Message):
