@@ -10,9 +10,8 @@ import database as db
 from languages import t
 from config import ADMIN_GROUP_ID, BOT_WALLET, BOT_WALLET_LTC, ADMIN_ID, REVIEW_CHANNEL_ID
 
-# Resolve path to yee.mp4 in the root directory
 ROOT_DIR = Path(__file__).resolve().parent.parent
-GIF_PATH = ROOT_DIR / "yee.mp4"
+GIF_PATH = ROOT_DIR / "yee.gif"
 
 def display_currency(currency: str) -> str:
     if currency == "USDT":
@@ -33,14 +32,12 @@ async def dm_block(message: Message):
         parse_mode="HTML",
     )
 
-# --- Helper to check if user is admin ---
 async def is_admin(user_id: int) -> bool:
     if user_id == ADMIN_ID:
         return True
     row = await db.fetchval("SELECT 1 FROM bot_admins WHERE user_id = $1", user_id)
     return row is not None
 
-# --- Helper to send the Avoid Scam GIF ---
 async def send_avoid_scam_gif(message: Message):
     if os.path.exists(GIF_PATH):
         await message.answer_animation(
@@ -49,9 +46,8 @@ async def send_avoid_scam_gif(message: Message):
             parse_mode="HTML"
         )
     else:
-        await message.answer("⚠️ The educational GIF (<code>yee.mp4</code>) is missing from the server.", parse_mode="HTML")
+        await message.answer("⚠️ The educational GIF (<code>yee.gif</code>) is missing from the server.", parse_mode="HTML")
 
-# --- Helper for Terms ---
 async def process_terms(message: Message):
     if not is_group(message):
         return await dm_block(message)
@@ -79,7 +75,7 @@ async def process_terms(message: Message):
         "<b>6. 💰 THE PRICE OF THE ESCROW</b>\n\n"
         "By using YEETOP ESCROW BOT, you acknowledge and agree to our <b>5% escrow fee</b>, subject to a <b>minimum fee of $5</b>.\n\n"
         "If you proceed with a transaction, you are confirming that you understand and accept these terms.\n\n"
-        "➖➖➖➖➖➖➖\n\n"
+        "➖➖➖➖➖➖➖➖➖\n\n"
         "<b>☠️ FINAL WARNING</b>\n\n"
         "<b>Read before you trust.\n"
         "Verify before you pay.\n"
@@ -90,7 +86,6 @@ async def process_terms(message: Message):
     )
     await message.answer(text, parse_mode="HTML")
 
-# --- Helper for Contact Admin ---
 async def process_contact_admin(message: Message, bot: Bot):
     if not is_group(message):
         return await dm_block(message)
@@ -123,11 +118,9 @@ async def process_contact_admin(message: Message, bot: Bot):
             parse_mode="HTML",
         )
 
-# ————— /start —————
-
 @router.message(CommandStart())
 async def cmd_start(message: Message, bot: Bot):
-    # Global Ban Check
+    # GLOBAL BAN CHECK (UPSERT ensures user exists in DB)
     user = await db.fetchrow("SELECT is_banned FROM users WHERE user_id = $1", message.from_user.id)
     if user and user['is_banned'] == 1:
         return await message.answer("⛔ <b>You have been banned from using YEETOP ESCROW BOT.</b>\n\nIf you believe this is a mistake, please contact support.", parse_mode="HTML")
@@ -141,11 +134,9 @@ async def cmd_start(message: Message, bot: Bot):
                 parse_mode="HTML",
             )
             
-    # 1. Send the GIF first
     if os.path.exists(GIF_PATH):
         await message.answer_animation(animation=FSInputFile(GIF_PATH))
             
-    # 2. Build Keyboard with the new button
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="⚖️ Terms of Service", callback_data="btn_terms"),
@@ -156,16 +147,11 @@ async def cmd_start(message: Message, bot: Bot):
         ]
     ])
     
-    # 3. Send the welcome text with buttons
     await message.answer(t(message.from_user.language_code or "en", "welcome"), parse_mode="HTML", reply_markup=kb)
-
-# ————— /chatid —————
 
 @router.message(Command("chatid"))
 async def cmd_chatid(message: Message):
     await message.answer(f" Chat ID: <code>{message.chat.id}</code>", parse_mode="HTML")
-
-# ————— /addadmin —————
 
 @router.message(Command("addadmin"))
 async def cmd_addadmin(message: Message):
@@ -180,7 +166,7 @@ async def cmd_addadmin(message: Message):
     await db.execute("INSERT INTO bot_admins (user_id) VALUES ($1) ON CONFLICT DO NOTHING", uid)
     await message.answer(f"✅ Admin <code>{uid}</code> added successfully.", parse_mode="HTML")
 
-# ————— /ban & /unban —————
+# ————— FIXED /ban & /unban —————
 
 @router.message(Command("ban"))
 async def cmd_ban(message: Message):
@@ -196,7 +182,8 @@ async def cmd_ban(message: Message):
     if target_id == message.from_user.id:
         return await message.answer("⛔ You cannot ban yourself.", parse_mode="HTML")
         
-    await db.execute("UPDATE users SET is_banned = 1 WHERE user_id = $1", target_id)
+    # UPSERT: Creates the user if they don't exist, then bans them
+    await db.execute("INSERT INTO users (user_id, is_banned) VALUES ($1, 1) ON CONFLICT (user_id) DO UPDATE SET is_banned = 1", target_id)
     await message.answer(f"🚫 User <code>{target_id}</code> has been <b>banned</b> from using the bot.", parse_mode="HTML")
 
 @router.message(Command("unban"))
@@ -210,10 +197,9 @@ async def cmd_unban(message: Message):
         
     target_id = int(parts[1])
     
-    await db.execute("UPDATE users SET is_banned = 0 WHERE user_id = $1", target_id)
+    # UPSERT: Creates the user if they don't exist, then unbans them
+    await db.execute("INSERT INTO users (user_id, is_banned) VALUES ($1, 0) ON CONFLICT (user_id) DO UPDATE SET is_banned = 0", target_id)
     await message.answer(f"✅ User <code>{target_id}</code> has been <b>unbanned</b>.", parse_mode="HTML")
-
-# ————— /qr —————
 
 @router.message(Command("qr"))
 async def cmd_qr(message: Message, bot: Bot):
@@ -246,8 +232,6 @@ async def cmd_qr(message: Message, bot: Bot):
         parse_mode="HTML",
     )
 
-# ————— /terms & Button —————
-
 @router.message(Command("terms"))
 async def cmd_terms(message: Message):
     await process_terms(message)
@@ -257,8 +241,6 @@ async def cb_terms(callback: CallbackQuery):
     await process_terms(callback.message)
     await callback.answer()
 
-# ————— /contactadmin & Button —————
-
 @router.message(Command("contactadmin"))
 async def cmd_contact(message: Message, bot: Bot):
     await process_contact_admin(message, bot)
@@ -267,8 +249,6 @@ async def cmd_contact(message: Message, bot: Bot):
 async def cb_contact_admin(callback: CallbackQuery, bot: Bot):
     await process_contact_admin(callback.message, bot)
     await callback.answer()
-
-# ————— /avoidscam & Button —————
 
 @router.message(Command("avoidscam"))
 async def cmd_avoid_scam(message: Message):

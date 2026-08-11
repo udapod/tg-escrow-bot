@@ -80,6 +80,17 @@ async def dm_block(message: Message):
         parse_mode="HTML",
     )
 
+async def is_user_banned(user_id: int) -> bool:
+    user = await db.fetchrow("SELECT is_banned FROM users WHERE user_id = $1", user_id)
+    return user is not None and user['is_banned'] == 1
+
+async def banned_block(message: Message):
+    await message.answer(
+        "⛔ <b>You have been banned from using YEETOP ESCROW BOT.</b>\n\n"
+        "If you believe this is a mistake, please contact support.",
+        parse_mode="HTML",
+    )
+
 async def check_bot_is_admin(bot: Bot, chat_id: int) -> bool:
     try:
         member = await bot.get_chat_member(chat_id, bot.id)
@@ -139,6 +150,8 @@ async def prompt_for_review(bot: Bot, deal: dict):
 async def cmd_seller(message: Message, bot: Bot):
     if not is_group(message):
         return await dm_block(message)
+    if await is_user_banned(message.from_user.id):
+        return await banned_block(message)
     if not await check_bot_is_admin(bot, message.chat.id):
         return await not_admin_block(message)
 
@@ -189,6 +202,8 @@ async def cmd_seller(message: Message, bot: Bot):
 async def cmd_buyer(message: Message, bot: Bot):
     if not is_group(message):
         return await dm_block(message)
+    if await is_user_banned(message.from_user.id):
+        return await banned_block(message)
     if not await check_bot_is_admin(bot, message.chat.id):
         return await not_admin_block(message)
 
@@ -264,6 +279,8 @@ async def check_deal_ready(message: Message, bot: Bot):
 async def cmd_pay_seller(message: Message, bot: Bot):
     if not is_group(message):
         return await dm_block(message)
+    if await is_user_banned(message.from_user.id):
+        return await banned_block(message)
     if not await check_bot_is_admin(bot, message.chat.id):
         return await not_admin_block(message)
 
@@ -300,6 +317,8 @@ async def cmd_pay_seller(message: Message, bot: Bot):
 async def cmd_refund(message: Message, bot: Bot):
     if not is_group(message):
         return await dm_block(message)
+    if await is_user_banned(message.from_user.id):
+        return await banned_block(message)
     if not await check_bot_is_admin(bot, message.chat.id):
         return await not_admin_block(message)
 
